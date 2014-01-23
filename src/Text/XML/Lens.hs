@@ -70,7 +70,8 @@ import qualified Data.Text.Lazy as TL
 import           Data.Text (Text)
 import           Data.Map (Map)
 import           Text.XML
-  ( Document, Doctype, Prologue
+  ( ParseSettings, RenderSettings
+  , Document, Doctype, Prologue
   , Node(..)
   , Element(Element), Instruction, Name, Miscellaneous(..)
   , XMLException(..), UnresolvedEntityException(..)
@@ -91,21 +92,25 @@ entire :: Traversal' Element Element
 entire f e@(Element _ _ ns) = com <$> f e <*> traverse (_NodeElement (entire f)) ns where
     com (Element n a _) = Element n a
 
+-- | A 'Prism'' into XML 'Document'
 class AsDocument t where
-  -- | A 'Prism'' into XML 'Document'
-  _Document :: Prism' t Document
+  _DocumentWith :: ParseSettings -> RenderSettings -> Prism' t Document
 
 instance AsDocument Document where
-  _Document = id
-  {-# INLINE _Document #-}
+  _DocumentWith _ _ = id
+  {-# INLINE _DocumentWith #-}
 
 instance AsDocument BL.ByteString where
-  _Document = prism' (renderLBS def) (either (const Nothing) Just . parseLBS def)
-  {-# INLINE _Document #-}
+  _DocumentWith ps rs = prism' (renderLBS rs) (either (const Nothing) Just . parseLBS ps)
+  {-# INLINE _DocumentWith #-}
 
 instance AsDocument TL.Text where
-  _Document = prism' (renderText def) (either (const Nothing) Just . parseText def)
-  {-# INLINE _Document #-}
+  _DocumentWith ps rs = prism' (renderText rs) (either (const Nothing) Just . parseText ps)
+  {-# INLINE _DocumentWith #-}
+
+_Document :: AsDocument t => Prism' t Document
+_Document = _DocumentWith def def
+{-# INLINE _Document #-}
 
 prologue :: AsDocument t => Traversal' t Prologue
 prologue = _Document . documentPrologue

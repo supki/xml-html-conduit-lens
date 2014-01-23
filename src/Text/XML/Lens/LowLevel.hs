@@ -16,10 +16,32 @@ import           Control.Lens
 import           Data.Map (Map)
 import           Data.Text (Text)
 import           Text.XML
-  ( Document, Doctype, Prologue, ExternalID
+  ( ParseSettings, RenderSettings
+  , Document, Doctype, Prologue, ExternalID
   , Node(..), Element, Instruction, Name, Miscellaneous(..)
   )
+import           Text.XML.Stream.Parse (DecodeEntities)
 import qualified Text.XML as XML
+
+-- | A Lens into 'XML.rsPretty'
+psDecodeEntities :: Lens' ParseSettings DecodeEntities
+psDecodeEntities f ps = f (XML.psDecodeEntities ps) <&> \p -> ps { XML.psDecodeEntities = p }
+{-# INLINE psDecodeEntities #-}
+
+-- | A Lens into 'XML.rsPretty'
+rsPretty :: Lens' RenderSettings Bool
+rsPretty f rs = f (XML.rsPretty rs) <&> \p -> rs { XML.rsPretty = p }
+{-# INLINE rsPretty #-}
+
+-- | A Lens into 'XML.rsNamespaces'
+rsNamespaces :: Lens' RenderSettings [(Text, Text)]
+rsNamespaces f rs = f (XML.rsNamespaces rs) <&> \p -> rs { XML.rsNamespaces = p }
+{-# INLINE rsNamespaces #-}
+
+-- | A Lens into 'XML.rsAttrOrder'
+rsAttrOrder :: Lens' RenderSettings (Name -> Map Name Text -> [(Name, Text)])
+rsAttrOrder f rs = f (XML.rsAttrOrder rs) <&> \p -> rs { XML.rsAttrOrder = p }
+{-# INLINE rsAttrOrder #-}
 
 -- | A Lens into 'XML.documentPrologue'
 documentPrologue :: Lens' Document Prologue
