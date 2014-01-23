@@ -7,7 +7,6 @@ import qualified Data.ByteString.Lazy.Char8 as BL
 import qualified Data.Text.Lazy as TL
 import           Test.Hspec.Lens
 
-import           Text.XML (Doctype(..))
 import           Text.XML.Lens
 
 
@@ -31,11 +30,11 @@ spec = do
         doc      = header <> dtd <> rest
 
     it "works with lazy 'ByteString' type" $
-      BL.pack doc `shouldPreview` Doctype { doctypeName = "foo", doctypeID = Nothing }
+      BL.pack doc `shouldPreview` "foo"
      `through`
-      doctype.folded
+      doctype.folded.doctypeName
 
     it "works with lazy 'Text' type" $
-      BL.pack doc `shouldPreview` Doctype { doctypeName = "foo", doctypeID = Nothing }
+      BL.pack doc `shouldPreview` "foo"
      `through`
-      doctype.folded
+      doctype.folded.doctypeName

@@ -49,10 +49,14 @@ module Text.XML.Lens (
     , documentRoot
     , documentEpilogue
     -- * Optics for 'Prologue'
-    , doctype
     , prologueBefore
     , prologueDoctype
     , prologueAfter
+    -- * Optics for 'Doctype'
+    , Doctype
+    , doctype
+    , doctypeName
+    , doctypeID
     -- * Lenses for 'Name'
     , Name(..)
     , _nameLocalName
@@ -84,6 +88,7 @@ import           Text.XML hiding
   ( documentPrologue, documentRoot, documentEpilogue
   , prologueBefore, prologueDoctype, prologueAfter
   , instructionTarget, instructionData
+  , doctypeName, doctypeID
   )
 import qualified Text.XML as XML
 
@@ -225,6 +230,14 @@ prologueDoctype f doc =  f (XML.prologueDoctype doc) <&> \p -> doc { XML.prologu
 prologueAfter :: Lens' Prologue [Miscellaneous]
 prologueAfter f doc =  f (XML.prologueAfter doc) <&> \p -> doc { XML.prologueAfter = p }
 {-# INLINE prologueAfter #-}
+
+doctypeName :: Lens' Doctype Text
+doctypeName f doc =  f (XML.doctypeName doc) <&> \p -> doc { XML.doctypeName = p }
+{-# INLINE doctypeName #-}
+
+doctypeID :: Lens' Doctype (Maybe ExternalID)
+doctypeID f doc =  f (XML.doctypeID doc) <&> \p -> doc { XML.doctypeID = p }
+{-# INLINE doctypeID #-}
 
 -- | A 'Prism'' into processing 'Instruction'
 class AsProcessingInstruction t where
