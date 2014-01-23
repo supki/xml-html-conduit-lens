@@ -99,6 +99,10 @@ import           Text.XML
   )
 import qualified Text.XML as XML
 
+-- $setup
+-- >>> :set -XOverloadedStrings
+-- >>> import qualified Data.Text as Text
+
 -- | Traverse itself with its all children.　Rewriting subnodes of each children will break a traversal law.
 entire :: Traversal' Element Element
 entire f e@(Element _ _ ns) = com <$> f e <*> traverse (_NodeElement (entire f)) ns where
@@ -194,26 +198,62 @@ instance Plated Element where
   plate = elementNodes . traverse . _NodeElement
   {-# INLINE plate #-}
 
-nodes :: AsElement t => Traversal' t Node
-nodes = _Element . elementNodes . traverse
-{-# INLINE nodes #-}
-
+-- | Look into the nodes one level deeper with specific names
+--
+-- >>> let xml = "<root><foo>boo</foo><foo>hoo</foo><bar>moo</bar></root>" :: TL.Text
+-- >>> xml ^. root.node "root".node "foo".text
+-- "boohoo"
+-- >>> xml ^? root.node "root".node "bar".text
+-- Just "moo"
+-- >>> xml ^? root.node "root".node "baz".text
+-- Nothing
 node :: AsElement t => Name -> Traversal' t Node
 node n = named n . elementNodes . traverse
 {-# INLINE node #-}
 
--- | Traverse elements which has the specified name.
+-- | Look into the nodes one level deeper
+--
+-- >>> let xml = "<root><foo>boo</foo><foo>hoo</foo><bar>moo</bar></root>" :: TL.Text
+-- >>> xml ^. root.node "root".nodes.text
+-- "boohoomoo"
+-- >>> xml ^? root.node "moot".nodes.text
+-- Nothing
+nodes :: AsElement t => Traversal' t Node
+nodes = _Element . elementNodes . traverse
+{-# INLINE nodes #-}
+
+-- | Select nodes by name
+--
+-- >>> let xml = "<root><foo>4</foo><foo>7</foo><bar>11</bar></root>" :: TL.Text
+-- >>> xml ^.. root.node "root".named "foo".localName
+-- ["foo","foo"]
+-- >>> xml ^? root.node "root".named "bar".localName
+-- Just "bar"
+-- >>> xml ^? root.node "root".named "baz".localName
+-- Nothing
 named :: AsElement t => Name -> Traversal' t Element
 named n = _Element . filtered (has (elementName.only n))
 {-# INLINE named #-}
 
+-- | Select nodes by attributes values
+--
+-- >>> let xml = "<root><foo bar=\"baz\">4</foo><foo bar=\"quux\">7</foo><bar bar=\"baz\">11</bar></root>" :: TL.Text
+-- >>> xml ^.. root.plate.attributed (ix "bar".only "baz").nodes.text
+-- ["4","11"]
+-- >>> xml ^? root.plate.attributed (folded.to Text.length.only 4).nodes.text
+-- Just "7"
 attributed :: AsElement t => Fold (Map Name Text) a -> Traversal' t Element
 attributed p = _Element . filtered (has (elementAttributes . p))
 {-# INLINE attributed #-}
 
-attributes :: AsElement t => Traversal' t (Map Name Text)
-attributes = _Element . elementAttributes
-{-# INLINE attributes #-}
+-- | Look into the nodes one level deeper
+--
+-- >>> let xml = "<root><foo>4</foo><foo>7</foo><bar>11</bar></root>" :: TL.Text
+-- >>> xml ^.. root.plate.localName
+-- ["foo","foo","bar"]
+instance Plated Node where
+  plate = nodes
+  {-# INLINE plate #-}
 
 _NodeElement :: Prism' Node Element
 _NodeElement = prism' NodeElement (\s -> case s of NodeElement e -> Just e; _ -> Nothing)
@@ -244,8 +284,12 @@ elementNodes f e = f (XML.elementNodes e) <&> \p -> e { XML.elementNodes = p }
 {-# INLINE elementNodes #-}
 
 attr :: AsElement t => Name -> IndexedTraversal' Name t Text
-attr n = attributes . ix n
+attr n = _Element . elementAttributes . ix n
 {-# INLINE attr #-}
+
+attributes :: AsElement t => IndexedTraversal' Name t Text
+attributes = _Element . elementAttributes . itraversed
+{-# INLINE attributes #-}
 
 -- | Traverse node text.
 text :: Traversal' Node Text
@@ -296,7 +340,7 @@ instructionData f i = f (XML.instructionData i) <&> \p -> i { XML.instructionDat
 
 -- | A 'Prism'' into XML comment
 class AsComment t where
-    _Comment :: Prism' t Text
+  _Comment :: Prism' t Text
 
 instance AsComment Text where
   _Comment = id
@@ -319,6 +363,10 @@ instance AsName Name where
 
 instance AsName Element where
   name = elementName
+  {-# INLINE name #-}
+
+instance AsName Node where
+  name = _NodeElement . name
   {-# INLINE name #-}
 
 localName :: AsName t => Traversal' t Text
