@@ -41,8 +41,7 @@ module Text.XML.Lens (
     , _NodeComment
     , _NodeInstruction
     -- ** Stuff
-    , attributeIs
-    , attributeSatisfies
+    , attributed
     , attr
     , AsComment(..)
     -- ** Children
@@ -104,12 +103,6 @@ import qualified Text.XML as XML
 entire :: Traversal' Element Element
 entire f e@(Element _ _ ns) = com <$> f e <*> traverse (_NodeElement (entire f)) ns where
     com (Element n a _) = Element n a
-
-attributeSatisfies :: Name -> (Text -> Bool) -> Traversal' Element Element
-attributeSatisfies n p = filtered (maybe False p . preview (elementAttributes . ix n))
-
-attributeIs :: Name -> Text -> Traversal' Element Element
-attributeIs n v = attributeSatisfies n (==v)
 
 class AsDocument t where
   -- | A 'Prism'' into XML 'Document'
@@ -201,13 +194,17 @@ instance Plated Element where
   plate = elementNodes . traverse . _NodeElement
   {-# INLINE plate #-}
 
-nodes :: AsElement t => Traversal' t [Node]
-nodes = _Element . elementNodes
+nodes :: AsElement t => Traversal' t Node
+nodes = _Element . elementNodes . traverse
 {-# INLINE nodes #-}
 
 node :: AsElement t => Name -> Traversal' t Node
 node n = _Element . named n . elementNodes . traverse
 {-# INLINE node #-}
+
+attributed :: AsElement t => Fold (Map Name Text) a -> Traversal' t Element
+attributed p = _Element . filtered (has (elementAttributes . p))
+{-# INLINE attributed #-}
 
 -- | Traverse elements which has the specified name.
 named :: Name -> Traversal' Element Element
