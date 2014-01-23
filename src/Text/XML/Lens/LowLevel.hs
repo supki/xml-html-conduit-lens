@@ -83,6 +83,16 @@ doctypeID :: Lens' Doctype (Maybe ExternalID)
 doctypeID f doc =  f (XML.doctypeID doc) <&> \p -> doc { XML.doctypeID = p }
 {-# INLINE doctypeID #-}
 
+-- | A Prism into 'XML.SystemID'
+_SystemID :: Prism' ExternalID Text
+_SystemID = prism' XML.SystemID (\s -> case s of XML.SystemID e -> Just e; _ -> Nothing)
+{-# INLINE _SystemID #-}
+
+-- | A Prism into 'XML.SystemID'
+_PublicID :: Prism' ExternalID (Text, Text)
+_PublicID = prism' (uncurry XML.PublicID) (\s -> case s of XML.PublicID e e' -> Just (e, e'); _ -> Nothing)
+{-# INLINE _PublicID #-}
+
 -- | A Lens into 'XML.elementName'
 elementName :: Lens' Element Name
 elementName f e = f (XML.elementName e) <&> \p -> e { XML.elementName = p }

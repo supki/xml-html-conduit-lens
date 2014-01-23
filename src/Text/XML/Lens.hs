@@ -116,6 +116,16 @@ prologue :: AsDocument t => Traversal' t Prologue
 prologue = _Document . documentPrologue
 {-# INLINE prologue #-}
 
+-- | A Traversal into XML document root node
+--
+-- >>> ("<foo/>" :: TL.Text) ^? root.name
+-- Just "foo"
+--
+-- >>> ("<foo><bar/><baz/></foo>" :: TL.Text) ^? root.name
+-- Just "foo"
+--
+-- >>> ("<foo/>" :: TL.Text) & root.name .~ "boo"
+-- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><boo/>"
 root :: AsDocument t => Traversal' t Element
 root = _Document . documentRoot
 {-# INLINE root #-}
@@ -327,7 +337,7 @@ instance AsComment Miscellaneous where
   {-# INLINE comment #-}
 
 class AsName t where
-  _Name :: Traversal' t Name
+  _Name :: Lens' t Name
 
 instance AsName Name where
   _Name = id
@@ -337,19 +347,48 @@ instance AsName Element where
   _Name = elementName
   {-# INLINE _Name #-}
 
-instance AsName Node where
-  _Name = _NodeElement . _Name
-  {-# INLINE _Name #-}
-
-name :: AsName t => Traversal' t Text
+-- | A Lens into node name
+--
+-- >>> ("<root/>" :: TL.Text) ^. root.name
+-- "root"
+--
+-- >>> ("<root><foo/><bar/><baz/></root>" :: TL.Text) ^.. root.plate.name
+-- ["foo","bar","baz"]
+--
+-- >>> ("<root><foo/><bar/><baz></root>" :: TL.Text) & root.partsOf (plate.name) .~ ["boo", "hoo", "moo"]
+-- "<root><foo/><bar/><baz></root>"
+name :: AsName t => Lens' t Text
 name = _Name . nameLocalName
 {-# INLINE name #-}
 
-namespace :: AsName t => Traversal' t (Maybe Text)
+-- | A Lens into node namespace
+--
+-- >>> ("<root/>" :: TL.Text) ^. root.namespace
+-- Nothing
+--
+-- >>> ("<root/>" :: TL.Text) & root.namespace ?~ "foo"
+-- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root xmlns=\"foo\"/>"
+--
+-- >>> ("<root xmlns=\"foo\"/>" :: TL.Text) & root.namespace .~ Nothing
+-- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root/>"
+namespace :: AsName t => Lens' t (Maybe Text)
 namespace = _Name . nameNamespace
 {-# INLINE namespace #-}
 
-prefix :: AsName t => Traversal' t (Maybe Text)
+-- | A Lens into node namespace
+--
+-- >>> ("<root/>" :: TL.Text) ^. root.prefix
+-- Nothing
+--
+-- >>> ("<root/>" :: TL.Text) & root.prefix ?~ "foo"
+-- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root/>"
+--
+-- >>> ("<root xmlns=\"foo\"/>" :: TL.Text) & root.prefix ?~ "foo"
+-- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><foo:root xmlns:foo=\"foo\"/>"
+--
+-- >>> ("<?xml version=\"1.0\" encoding=\"UTF-8\"?><foo:root xmlns:foo=\"foo\"/>" :: TL.Text) & root.prefix .~ Nothing
+-- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root xmlns=\"foo\"/>"
+prefix :: AsName t => Lens' t (Maybe Text)
 prefix = _Name . namePrefix
 {-# INLINE prefix #-}
 

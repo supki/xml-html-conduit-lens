@@ -67,6 +67,13 @@ List authors of books longer then 500 pages:
 ["Bryan O'Sullivan, Don Stewart, and John Goerzen","Benjamin C. Pierce"]
 ```
 
+List all tags from top to bottom:
+
+```
+>>> xml ^.. root.to universe.folded.name
+["books","book","title","author","pages","price","book","title","author","pages","book","title","author","pages","book","title","author","pages","book","title","author","pages","book","title","author","pages","book","title","author"]
+```
+
 Compute the length of the books list:
 
 ```
