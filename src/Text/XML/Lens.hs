@@ -19,8 +19,6 @@ module Text.XML.Lens (
     Element(..)
     , (./)
     -- ** Names
-    , name
-    , localName
     , el
     , ell
     -- ** Attributes
@@ -42,6 +40,7 @@ module Text.XML.Lens (
     , AsComment(..)
     -- * Optics for 'Document'
     , Document
+    , AsDocument(..)
     , root
     , prologue
     , epilogue
@@ -58,20 +57,24 @@ module Text.XML.Lens (
     , doctypeName
     , doctypeID
     -- * Lenses for 'Name'
-    , Name(..)
-    , _nameLocalName
-    , _nameNamespace
-    , _namePrefix
+    , Name
+    , AsName(..)
+    , localName
+    , namespace
+    , prefix
+    , nameLocalName
+    , nameNamespace
+    , namePrefix
     -- * Optics for 'Instruction'
-    , AsProcessingInstruction(..)
     , Instruction
+    , AsProcessingInstruction(..)
     , target
     , data_
     , instructionTarget
     , instructionData
-    -- * Decoding
-    , AsDocument(..)
     -- * Optics for exceptions
+    , UnresolvedEntityException
+    , XMLException
     , AsUnresolvedEntityException(..)
     , AsXMLException(..)
     ) where
@@ -89,19 +92,11 @@ import           Text.XML hiding
   , prologueBefore, prologueDoctype, prologueAfter
   , instructionTarget, instructionData
   , doctypeName, doctypeID
+  , elementName, nameLocalName, nameNamespace, namePrefix
   )
 import qualified Text.XML as XML
 
 infixr 9 ./
-
-_nameLocalName :: Lens' Name Text
-_nameLocalName f n = f (nameLocalName n) <&> \x -> n { nameLocalName = x }
-
-_nameNamespace :: Lens' Name (Maybe Text)
-_nameNamespace f n = f (nameNamespace n) <&> \x -> n { nameNamespace = x }
-
-_namePrefix :: Lens' Name (Maybe Text)
-_namePrefix f n = f (namePrefix n) <&> \x -> n { namePrefix = x }
 
 _Element :: Prism' Node Element
 _Element = prism' NodeElement $ \s -> case s of
@@ -113,12 +108,8 @@ _Content = prism' NodeContent $ \s -> case s of
     NodeContent e -> Just e
     _ -> Nothing
 
-name :: Lens' Element Name
-name f e = f (elementName e) <&> \x -> e { elementName = x }
-
-localName :: Lens' Element Text
-localName = name . _nameLocalName
-{-# INLINE localName #-}
+elementName :: Lens' Element Name
+elementName f e = f (XML.elementName e) <&> \x -> e { XML.elementName = x }
 
 attrs :: Lens' Element (Map Name Text)
 attrs f e = fmap (\x -> e { elementAttributes = x }) $ f $ elementAttributes e
@@ -140,13 +131,13 @@ entire f e@(Element _ _ ns) = com <$> f e <*> traverse (_Element (entire f)) ns 
 -- | Traverse elements which has the specified name.
 el :: Name -> Traversal' Element Element
 el n f s
-    | elementName s == n = f s
+    | XML.elementName s == n = f s
     | otherwise = pure s
 
 -- | Traverse elements which has the specified *local* name. 
 ell :: Text -> Traversal' Element Element
 ell n f s
-    | nameLocalName (elementName s) == n = f s
+    | XML.nameLocalName (XML.elementName s) == n = f s
     | otherwise = pure s
 
 attributeSatisfies :: Name -> (Text -> Bool) -> Traversal' Element Element
@@ -286,6 +277,41 @@ instance AsComment Node where
 instance AsComment Miscellaneous where
   _Comment = prism' MiscComment (\s -> case s of MiscComment e -> Just e; _ -> Nothing)
   {-# INLINE _Comment #-}
+
+class AsName t where
+  name :: Traversal' t Name
+
+instance AsName Name where
+  name = id
+  {-# INLINE name #-}
+
+instance AsName Element where
+  name = elementName
+  {-# INLINE name #-}
+
+localName :: AsName t => Traversal' t Text
+localName = name . nameLocalName
+{-# INLINE localName #-}
+
+namespace :: AsName t => Traversal' t (Maybe Text)
+namespace = name . nameNamespace
+{-# INLINE namespace #-}
+
+prefix :: AsName t => Traversal' t (Maybe Text)
+prefix = name . namePrefix
+{-# INLINE prefix #-}
+
+nameLocalName :: Lens' Name Text
+nameLocalName f n = f (XML.nameLocalName n) <&> \x -> n { XML.nameLocalName = x }
+{-# INLINE nameLocalName #-}
+
+nameNamespace :: Lens' Name (Maybe Text)
+nameNamespace f n = f (XML.nameNamespace n) <&> \x -> n { XML.nameNamespace = x }
+{-# INLINE nameNamespace #-}
+
+namePrefix :: Lens' Name (Maybe Text)
+namePrefix f n = f (XML.namePrefix n) <&> \x -> n { XML.namePrefix = x }
+{-# INLINE namePrefix #-}
 
 class AsUnresolvedEntityException p f t where
   _UnresolvedEntityException :: Overloaded' p f t UnresolvedEntityException
