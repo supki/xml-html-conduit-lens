@@ -56,14 +56,14 @@ First, let's prepare the environment
 List titles of the book in "Textbooks" category:
 
 ```
->>> xml ^.. root.plate.attributed (ix "category".only "Textbooks").node "book".node "title".text
+>>> xml ^.. root.plate.attributed (ix "category".only "Textbooks").node "title".text
 ["Learn You a Haskell for Great Good!","Programming in Haskell","Real World Haskell"]
 ```
 
 List authors of books longer then 500 pages:
 
 ```
->>> xml ^.. root.node "books".filtered (has (node "book".node "pages".text.filtered (> "500"))).node "book".node 
+>>> xml ^.. xml ^.. root.plate.filtered (has (node "pages".text.filtered (> "500"))).node "author".text
 "author".text
 ["Bryan O'Sullivan, Don Stewart, and John Goerzen","Benjamin C. Pierce"]
 ```
@@ -71,21 +71,21 @@ List authors of books longer then 500 pages:
 Compute the length of the books list:
 
 ```
->>> xml & lengthOf (root.plate.name)
+>>> xml & lengthOf (root.plate)
 7
 ```
 
 Find the title of the first book in "Joke" category:
 
 ```
->>> xml ^? root.node "books".attributed (ix "category".only "Joke").node "book".node "title".text
+>>> xml ^? root.plate.attributed (ix "category".only "Joke").node "title".text
 Just "Functional Ikamusume"
 ```
 
 Append the string " pages" to each `<pages>` tag contents:
 
 ```
->>> xml & root.node "books".node "book".node "pages".text <>~ " pages" & TL.putStr
+>>> xml & root.plate.node "pages".text <>~ " pages" & TL.putStr
 <?xml version="1.0" encoding="UTF-8"?><books>
 <book category="Language and library definition">
     <title>Haskell 98 language and libraries: the Revised Report</title>
