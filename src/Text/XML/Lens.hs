@@ -36,7 +36,6 @@ module Text.XML.Lens (
     , Node(..)
     , _Element
     , _Content
-    , AsInstruction(..)
     , AsComment(..)
     -- * Optics for 'Document'
     , Document
@@ -56,10 +55,13 @@ module Text.XML.Lens (
     , _nameLocalName
     , _nameNamespace
     , _namePrefix
-    -- * Lenses for 'Instruction'
-    , Instruction(..)
-    , _instructionTarget
-    , _instructionData
+    -- * Optics for 'Instruction'
+    , AsProcessingInstruction(..)
+    , Instruction
+    , target
+    , data_
+    , instructionTarget
+    , instructionData
     -- * Decoding
     , AsDocument(..)
     ) where
@@ -73,42 +75,11 @@ import           Data.Map (Map)
 import           Text.XML hiding
   ( documentPrologue, documentRoot, documentEpilogue
   , prologueBefore, prologueDoctype, prologueAfter
+  , instructionTarget, instructionData
   )
 import qualified Text.XML as XML
 
 infixr 9 ./
-
-class AsInstruction t where
-    _Instruction :: Prism' t Instruction
-
-_instructionTarget :: Lens' Instruction Text
-_instructionTarget f (Instruction t d) = f t <&> \t' -> Instruction t' d
-
-_instructionData :: Lens' Instruction Text
-_instructionData f (Instruction t d) = f d <&> \d' -> Instruction t d'
-
-instance AsInstruction Node where
-    _Instruction = prism' NodeInstruction $ \s -> case s of
-        NodeInstruction e -> Just e
-        _ -> Nothing
-
-instance AsInstruction Miscellaneous where
-    _Instruction = prism' MiscInstruction $ \s -> case s of
-        MiscInstruction e -> Just e
-        _ -> Nothing
-
-class AsComment t where
-    _Comment :: Prism' t Text
-
-instance AsComment Node where
-    _Comment = prism' NodeComment $ \s -> case s of
-        NodeComment e -> Just e
-        _ -> Nothing
-
-instance AsComment Miscellaneous where
-    _Comment = prism' MiscComment $ \s -> case s of
-        MiscComment e -> Just e
-        _ -> Nothing
 
 _nameLocalName :: Lens' Name Text
 _nameLocalName f n = f (nameLocalName n) <&> \x -> n { nameLocalName = x }
@@ -246,4 +217,52 @@ prologueDoctype f doc =  f (XML.prologueDoctype doc) <&> \p -> doc { XML.prologu
 prologueAfter :: Lens' Prologue [Miscellaneous]
 prologueAfter f doc =  f (XML.prologueAfter doc) <&> \p -> doc { XML.prologueAfter = p }
 {-# INLINE prologueAfter #-}
+
+-- | A 'Prism'' into processing 'Instruction'
+class AsProcessingInstruction t where
+  _Instruction :: Prism' t Instruction
+
+instance AsProcessingInstruction Instruction where
+  _Instruction = id
+  {-# INLINE _Instruction #-}
+
+instance AsProcessingInstruction Node where
+  _Instruction = prism' NodeInstruction (\s -> case s of NodeInstruction e -> Just e; _ -> Nothing)
+  {-# INLINE _Instruction #-}
+
+instance AsProcessingInstruction Miscellaneous where
+  _Instruction = prism' MiscInstruction (\s -> case s of MiscInstruction e -> Just e; _ -> Nothing)
+  {-# INLINE _Instruction #-}
+
+target :: AsProcessingInstruction t => Traversal' t Text
+target = _Instruction . instructionTarget
+{-# INLINE target #-}
+
+data_ :: AsProcessingInstruction t => Traversal' t Text
+data_ = _Instruction . instructionData
+{-# INLINE data_ #-}
+
+instructionTarget :: Lens' Instruction Text
+instructionTarget f i = f (XML.instructionTarget i) <&> \p -> i { XML.instructionTarget = p }
+{-# INLINE instructionTarget #-}
+
+instructionData :: Lens' Instruction Text
+instructionData f i = f (XML.instructionData i) <&> \p -> i { XML.instructionData = p }
+{-# INLINE instructionData #-}
+
+-- | A 'Prism'' into XML comment
+class AsComment t where
+    _Comment :: Prism' t Text
+
+instance AsComment Text where
+  _Comment = id
+  {-# INLINE _Comment #-}
+
+instance AsComment Node where
+  _Comment = prism' NodeComment (\s -> case s of NodeComment e -> Just e; _ -> Nothing)
+  {-# INLINE _Comment #-}
+
+instance AsComment Miscellaneous where
+  _Comment = prism' MiscComment (\s -> case s of MiscComment e -> Just e; _ -> Nothing)
+  {-# INLINE _Comment #-}
 
