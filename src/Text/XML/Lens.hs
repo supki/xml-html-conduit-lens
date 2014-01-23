@@ -199,17 +199,17 @@ nodes = _Element . elementNodes . traverse
 {-# INLINE nodes #-}
 
 node :: AsElement t => Name -> Traversal' t Node
-node n = _Element . named n . elementNodes . traverse
+node n = named n . elementNodes . traverse
 {-# INLINE node #-}
+
+-- | Traverse elements which has the specified name.
+named :: AsElement t => Name -> Traversal' t Element
+named n = _Element . filtered (has (elementName.only n))
+{-# INLINE named #-}
 
 attributed :: AsElement t => Fold (Map Name Text) a -> Traversal' t Element
 attributed p = _Element . filtered (has (elementAttributes . p))
 {-# INLINE attributed #-}
-
--- | Traverse elements which has the specified name.
-named :: Name -> Traversal' Element Element
-named n = filtered (has (elementName.only n))
-{-# INLINE named #-}
 
 attributes :: AsElement t => Traversal' t (Map Name Text)
 attributes = _Element . elementAttributes
