@@ -53,7 +53,7 @@ First, let's prepare the environment
 </book>
 ```
 
-List titles of the book in "Textbooks" category:
+List titles of books in "Textbooks" category:
 
 ```
 >>> xml ^.. root.plate.attributed (ix "category".only "Textbooks").node "title".text
@@ -64,7 +64,6 @@ List authors of books longer then 500 pages:
 
 ```
 >>> xml ^.. xml ^.. root.plate.filtered (has (node "pages".text.filtered (> "500"))).node "author".text
-"author".text
 ["Bryan O'Sullivan, Don Stewart, and John Goerzen","Benjamin C. Pierce"]
 ```
 
