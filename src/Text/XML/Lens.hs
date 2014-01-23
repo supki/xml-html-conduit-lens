@@ -38,15 +38,19 @@ module Text.XML.Lens (
     , _Content
     , AsInstruction(..)
     , AsComment(..)
-    -- * Lenses for 'Document'
+    -- * Optics for 'Document'
     , Document
     , root
     , prologue
     , epilogue
-    , doctype
     , documentPrologue
     , documentRoot
     , documentEpilogue
+    -- * Optics for 'Prologue'
+    , doctype
+    , prologueBefore
+    , prologueDoctype
+    , prologueAfter
     -- * Lenses for 'Name'
     , Name(..)
     , _nameLocalName
@@ -66,13 +70,13 @@ import qualified Data.ByteString.Lazy as BL
 import qualified Data.Text.Lazy as TL
 import           Data.Text (Text)
 import           Data.Map (Map)
-import           Text.XML hiding (documentPrologue, documentRoot, documentEpilogue)
+import           Text.XML hiding
+  ( documentPrologue, documentRoot, documentEpilogue
+  , prologueBefore, prologueDoctype, prologueAfter
+  )
 import qualified Text.XML as XML
 
 infixr 9 ./
-
-doctype :: Lens' Prologue (Maybe Doctype)
-doctype f doc = fmap (\p -> doc { prologueDoctype = p} ) $ f $ prologueDoctype doc
 
 class AsInstruction t where
     _Instruction :: Prism' t Instruction
@@ -226,3 +230,20 @@ documentRoot f doc = f (XML.documentRoot doc) <&> \p -> doc { XML.documentRoot =
 documentEpilogue :: Lens' Document [Miscellaneous]
 documentEpilogue f doc =  f (XML.documentEpilogue doc) <&> \p -> doc { XML.documentEpilogue = p}
 {-# INLINE documentEpilogue #-}
+
+doctype :: AsDocument t => Traversal' t (Maybe Doctype)
+doctype = _Document . documentPrologue . prologueDoctype
+{-# INLINE doctype #-}
+
+prologueBefore :: Lens' Prologue [Miscellaneous]
+prologueBefore f doc =  f (XML.prologueBefore doc) <&> \p -> doc { XML.prologueBefore = p }
+{-# INLINE prologueBefore #-}
+
+prologueDoctype :: Lens' Prologue (Maybe Doctype)
+prologueDoctype f doc =  f (XML.prologueDoctype doc) <&> \p -> doc { XML.prologueDoctype = p }
+{-# INLINE prologueDoctype #-}
+
+prologueAfter :: Lens' Prologue [Miscellaneous]
+prologueAfter f doc =  f (XML.prologueAfter doc) <&> \p -> doc { XML.prologueAfter = p }
+{-# INLINE prologueAfter #-}
+
