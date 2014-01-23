@@ -1,29 +1,92 @@
 xml-lens
 ========
 
-Lenses and traversals for [xml-conduit](http://hackage.haskell.org/package/xml-conduit).
+Optics for [xml-conduit](http://hackage.haskell.org/package/xml-conduit).
 
-Example
-========
+Examples
+--------
+
+First, let's prepare the environment
 
 ```haskell
-> doc <- Text.XML.readFile def "examples/books.xml"
-
-> doc ^.. root . el "books" ./ el "book" . attributeIs "category" "Textbooks" ./ el "title" . text
-["Learn You a Haskell for Great Good!","Programming in Haskell","Real World Haskell"]
-
-> lengthOf ?? doc $ root . el "books" ./ el "book"
-7
-
-> doc ^? root . el "books" ./ attributeIs "category" "Joke" ./ el "title" . text
-Just "Functional Ikamusume"
-
-> doc & root . el "books" ./ el "book" ./ el "pages" . text <>~ " pages" & renderLBS def & BL.putStrLn
-```
-
-```xml
+>>> :set -XOverloadedStrings
+>>> import Text.XML.Lens
+>>> import qualified Data.Text.Lazy.IO as T
+>>> xml <- T.readFile "examples/books.xml"
+>>> T.putStr xml
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <books>
+<book category="Language and library definition">
+    <title>Haskell 98 language and libraries: the Revised Report</title>
+    <author year="2003">Simon Peyton Jones</author>
+    <pages>272</pages>
+    <price>£45.00</price>
+</book>
+<book category="Textbooks">
+    <title>Learn You a Haskell for Great Good!</title>
+    <author year="2011">Miran Lipovaca</author>
+    <pages>360</pages>
+</book>
+<book category="Textbooks">
+    <title>Programming in Haskell</title>
+    <author year="2007">Graham Hutton</author>
+    <pages>200</pages>
+</book>
+<book category="Textbooks">
+    <title>Real World Haskell</title>
+    <author year="2008">Bryan O'Sullivan, Don Stewart, and John Goerzen</author>
+    <pages>700</pages>
+</book>
+<book category="TextBooks">
+    <title>The Fun of Programming</title>
+    <author year="2002">Jeremy Gibbons and Oege de Moor</author>
+    <pages>288</pages>
+</book>
+<book category="Foundations">
+    <title>Types and Programming Languages</title>
+    <author year="2002">Benjamin C. Pierce</author>
+    <pages>645</pages>
+</book>
+<book category="Joke">
+    <title>Functional Ikamusume</title>
+    <author>Team "Referential Transparent Sea Keepers"</author>
+</book>
+```
+
+List titles of the book in "Textbooks" category:
+
+```
+>>> xml ^.. root.plate.attributed (ix "category".only "Textbooks").node "book".node "title".text
+["Learn You a Haskell for Great Good!","Programming in Haskell","Real World Haskell"]
+```
+
+List authors of books longer then 500 pages:
+
+```
+>>> xml ^.. root.node "books".filtered (has (node "book".node "pages".text.filtered (> "500"))).node "book".node 
+"author".text
+["Bryan O'Sullivan, Don Stewart, and John Goerzen","Benjamin C. Pierce"]
+```
+
+Compute the length of the books list:
+
+```
+>>> xml & lengthOf (root.plate.name)
+7
+```
+
+Find the title of the first book in "Joke" category:
+
+```
+>>> xml ^? root.node "books".attributed (ix "category".only "Joke").node "book".node "title".text
+Just "Functional Ikamusume"
+```
+
+Append the string " pages" to each `<pages>` tag contents:
+
+```
+>>> xml & root.node "books".node "book".node "pages".text <>~ " pages" & TL.putStr
+<?xml version="1.0" encoding="UTF-8"?><books>
 <book category="Language and library definition">
     <title>Haskell 98 language and libraries: the Revised Report</title>
     <author year="2003">Simon Peyton Jones</author>
@@ -40,7 +103,24 @@ Just "Functional Ikamusume"
     <author year="2007">Graham Hutton</author>
     <pages>200 pages</pages>
 </book>
-…
+<book category="Textbooks">
+    <title>Real World Haskell</title>
+    <author year="2008">Bryan O'Sullivan, Don Stewart, and John Goerzen</author>
+    <pages>700 pages</pages>
+</book>
+<book category="TextBooks">
+    <title>The Fun of Programming</title>
+    <author year="2002">Jeremy Gibbons and Oege de Moor</author>
+    <pages>288 pages</pages>
+</book>
+<book category="Foundations">
+    <title>Types and Programming Languages</title>
+    <author year="2002">Benjamin C. Pierce</author>
+    <pages>645 pages</pages>
+</book>
+<book category="Joke">
+    <title>Functional Ikamusume</title>
+    <author>Team "Referential Transparent Sea Keepers"</author>
+</book>
+</books>
 ```
-
-
