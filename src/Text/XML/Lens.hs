@@ -39,11 +39,14 @@ module Text.XML.Lens (
     , AsInstruction(..)
     , AsComment(..)
     -- * Lenses for 'Document'
-    , Document(..)
+    , Document
     , root
     , prologue
     , epilogue
     , doctype
+    , documentPrologue
+    , documentRoot
+    , documentEpilogue
     -- * Lenses for 'Name'
     , Name(..)
     , _nameLocalName
@@ -53,26 +56,20 @@ module Text.XML.Lens (
     , Instruction(..)
     , _instructionTarget
     , _instructionData
-    -- * Reexport
-    , module Control.Lens
+    -- * Decoding
+    , AsDocument(..)
     ) where
-import Text.XML
-import Control.Lens
-import Data.Text (Text)
-import Data.Map (Map)
-import Control.Applicative
+
+import           Control.Applicative
+import           Control.Lens
+import qualified Data.ByteString.Lazy as BL
+import qualified Data.Text.Lazy as TL
+import           Data.Text (Text)
+import           Data.Map (Map)
+import           Text.XML hiding (documentPrologue, documentRoot, documentEpilogue)
+import qualified Text.XML as XML
 
 infixr 9 ./
-
-prologue :: Lens' Document Prologue
-prologue f doc = fmap (\p -> doc { documentPrologue = p} ) $ f $ documentPrologue doc
-
--- | The root element of the document.
-root :: Lens' Document Element
-root f doc = fmap (\p -> doc { documentRoot = p} ) $ f $ documentRoot doc
-
-epilogue :: Lens' Document [Miscellaneous]
-epilogue f doc = fmap (\p -> doc { documentEpilogue = p} ) $ f $ documentEpilogue doc
 
 doctype :: Lens' Prologue (Maybe Doctype)
 doctype f doc = fmap (\p -> doc { prologueDoctype = p} ) $ f $ prologueDoctype doc
@@ -189,3 +186,43 @@ instance Plated Element where
 (./) :: Plated a => Traversal s t a a -> Traversal a a u v -> Traversal s t u v
 l ./ m = l . plate . m
 {-# INLINE (./) #-}
+
+class AsDocument t where
+  -- | A 'Prism'' into XML 'Document'
+  _Document :: Prism' t Document
+
+instance AsDocument Document where
+  _Document = id
+  {-# INLINE _Document #-}
+
+instance AsDocument BL.ByteString where
+  _Document = prism' (renderLBS def) (either (const Nothing) Just . parseLBS def)
+  {-# INLINE _Document #-}
+
+instance AsDocument TL.Text where
+  _Document = prism' (renderText def) (either (const Nothing) Just . parseText def)
+  {-# INLINE _Document #-}
+
+prologue :: AsDocument t => Traversal' t Prologue
+prologue = _Document . documentPrologue
+{-# INLINE prologue #-}
+
+root :: AsDocument t => Traversal' t Element
+root = _Document . documentRoot
+{-# INLINE root #-}
+
+epilogue :: AsDocument t => Traversal' t [Miscellaneous]
+epilogue = _Document . documentEpilogue
+{-# INLINE epilogue #-}
+
+documentPrologue :: Lens' Document Prologue
+documentPrologue f doc = f (XML.documentPrologue doc) <&> \p -> doc { XML.documentPrologue = p}
+{-# INLINE documentPrologue #-}
+
+documentRoot :: Lens' Document Element
+documentRoot f doc = f (XML.documentRoot doc) <&> \p -> doc { XML.documentRoot = p}
+{-# INLINE documentRoot #-}
+
+documentEpilogue :: Lens' Document [Miscellaneous]
+documentEpilogue f doc =  f (XML.documentEpilogue doc) <&> \p -> doc { XML.documentEpilogue = p}
+{-# INLINE documentEpilogue #-}
