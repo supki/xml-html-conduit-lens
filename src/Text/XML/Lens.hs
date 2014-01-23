@@ -1,4 +1,7 @@
-{-# LANGUAGE Rank2Types, FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE Rank2Types #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 -----------------------------------------------------------------------------
 -- |
@@ -64,9 +67,14 @@ module Text.XML.Lens (
     , instructionData
     -- * Decoding
     , AsDocument(..)
+    -- * Optics for exceptions
+    , AsUnresolvedEntityException(..)
+    , AsXMLException(..)
     ) where
 
 import           Control.Applicative
+import           Control.Exception (SomeException)
+import           Control.Exception.Lens (exception)
 import           Control.Lens
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Text.Lazy as TL
@@ -266,3 +274,24 @@ instance AsComment Miscellaneous where
   _Comment = prism' MiscComment (\s -> case s of MiscComment e -> Just e; _ -> Nothing)
   {-# INLINE _Comment #-}
 
+class AsUnresolvedEntityException p f t where
+  _UnresolvedEntityException :: Overloaded' p f t UnresolvedEntityException
+
+instance AsUnresolvedEntityException p f UnresolvedEntityException where
+  _UnresolvedEntityException = id
+  {-# INLINE _UnresolvedEntityException #-}
+
+instance (Applicative f, Choice p) => AsUnresolvedEntityException p f SomeException where
+  _UnresolvedEntityException = exception
+  {-# INLINE _UnresolvedEntityException #-}
+
+class AsXMLException p f t where
+  _XMLException :: Overloaded' p f t XMLException
+
+instance AsXMLException p f XMLException where
+  _XMLException = id
+  {-# INLINE _XMLException #-}
+
+instance (Applicative f, Choice p) => AsXMLException p f SomeException where
+  _XMLException = exception
+  {-# INLINE _XMLException #-}
