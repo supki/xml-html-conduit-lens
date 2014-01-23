@@ -16,12 +16,12 @@ spec = do
     it "works with lazy 'ByteString' type" $
       BL.pack "<foo><bar>4</bar><bar>7</bar></foo>" `shouldList` ["4", "7"]
      `through`
-      root.el "foo"./el "bar".text
+      root.node "foo".node "bar".text
 
     it "works with lazy 'Text' type" $
       TL.pack "<foo><bar>4</bar><bar>7</bar></foo>" `shouldList` ["4", "7"]
      `through`
-      root.el "foo"./el "bar".text
+      root.node "foo".node "bar".text
 
   describe "doctype" $ do
     let header   = "<?xml version=\"1.0\" standalone=\"yes\" ?>"

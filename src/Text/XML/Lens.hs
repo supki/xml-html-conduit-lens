@@ -16,13 +16,8 @@
 -- Useful traversals inspired by XPath
 ----------------------------------------------------------------------------
 module Text.XML.Lens (
-    -- * Lenses, traversals for 'Element'
-      (./)
-    -- ** Names
-    , el
-    , ell
     -- * Optics for 'Doctype'
-    , Doctype
+      Doctype
     , doctype
     , doctypeName
     , doctypeID
@@ -30,25 +25,28 @@ module Text.XML.Lens (
     , Element
     , AsElement(..)
     , nodes
+    , node
+    , named
     , attributes
     , elementName
     , elementAttributes
     , elementNodes
-    -- ** Stuff
-    , attributeIs
-    , attributeSatisfies
-    , attr
+    -- * Prisms for 'Node'
+    , Node
     , text
     , comment
-    , AsComment(..)
-    -- ** Children
-    , entire
-    -- * Prisms for 'Node'
-    , Node(..)
+    , instruction
     , _NodeElement
     , _NodeContent
     , _NodeComment
     , _NodeInstruction
+    -- ** Stuff
+    , attributeIs
+    , attributeSatisfies
+    , attr
+    , AsComment(..)
+    -- ** Children
+    , entire
     -- * Optics for 'Document'
     , Document
     , AsDocument(..)
@@ -93,52 +91,25 @@ import qualified Data.ByteString.Lazy as BL
 import qualified Data.Text.Lazy as TL
 import           Data.Text (Text)
 import           Data.Map (Map)
-import           Text.XML hiding
-  ( documentPrologue, documentRoot, documentEpilogue
-  , prologueBefore, prologueDoctype, prologueAfter
-  , instructionTarget, instructionData
-  , doctypeName, doctypeID
-  , elementName, elementAttributes, elementNodes
-  , nameLocalName, nameNamespace, namePrefix
+import           Text.XML
+  ( Document, Doctype, Prologue, ExternalID
+  , Node(..)
+  , Element(Element), Instruction, Name, Miscellaneous(..)
+  , XMLException(..), UnresolvedEntityException(..)
+  , parseLBS, parseText, renderLBS, renderText, def
   )
 import qualified Text.XML as XML
-
-infixr 9 ./
 
 -- | Traverse itself with its all children.　Rewriting subnodes of each children will break a traversal law.
 entire :: Traversal' Element Element
 entire f e@(Element _ _ ns) = com <$> f e <*> traverse (_NodeElement (entire f)) ns where
     com (Element n a _) = Element n a
 
--- | Traverse elements which has the specified name.
-el :: Name -> Traversal' Element Element
-el n f s
-    | XML.elementName s == n = f s
-    | otherwise = pure s
-
--- | Traverse elements which has the specified *local* name. 
-ell :: Text -> Traversal' Element Element
-ell n f s
-    | XML.nameLocalName (XML.elementName s) == n = f s
-    | otherwise = pure s
-
 attributeSatisfies :: Name -> (Text -> Bool) -> Traversal' Element Element
 attributeSatisfies n p = filtered (maybe False p . preview (elementAttributes . ix n))
 
 attributeIs :: Name -> Text -> Traversal' Element Element
 attributeIs n v = attributeSatisfies n (==v)
-
-instance Plated Element where
-    plate = elementNodes . traverse . _NodeElement
-
--- | Combine two 'Traversal's just like XPath's slash.
--- 
--- @ 
--- l ./ m ≡ l . 'plate' . m
--- @
-(./) :: Plated a => Traversal s t a a -> Traversal a a u v -> Traversal s t u v
-l ./ m = l . plate . m
-{-# INLINE (./) #-}
 
 class AsDocument t where
   -- | A 'Prism'' into XML 'Document'
@@ -226,9 +197,22 @@ instance Applicative f => Ixed f Element where
   ix n = elementAttributes . ix n
   {-# INLINE ix #-}
 
+instance Plated Element where
+  plate = elementNodes . traverse . _NodeElement
+  {-# INLINE plate #-}
+
 nodes :: AsElement t => Traversal' t [Node]
 nodes = _Element . elementNodes
 {-# INLINE nodes #-}
+
+node :: AsElement t => Name -> Traversal' t Node
+node n = _Element . named n . elementNodes . traverse
+{-# INLINE node #-}
+
+-- | Traverse elements which has the specified name.
+named :: Name -> Traversal' Element Element
+named n = filtered (has (elementName.only n))
+{-# INLINE named #-}
 
 attributes :: AsElement t => Traversal' t (Map Name Text)
 attributes = _Element . elementAttributes
@@ -266,15 +250,20 @@ attr :: AsElement t => Name -> IndexedTraversal' Name t Text
 attr n = attributes . ix n
 {-# INLINE attr #-}
 
--- | Traverse all contents of the element.
-text :: AsElement t => Traversal' t Text
-text = nodes . traverse . _NodeContent
+-- | Traverse node text.
+text :: Traversal' Node Text
+text = _NodeContent
 {-# INLINE text #-}
 
--- | Traverse all comments of the element.
-comment :: AsElement t => Traversal' t Text
-comment = nodes . traverse . _Comment
+-- | Traverse node comment.
+comment :: Traversal' Node Text
+comment = _NodeComment
 {-# INLINE comment #-}
+
+-- | Traverse node instruction.
+instruction :: Traversal' Node Instruction
+instruction = _NodeInstruction
+{-# INLINE instruction #-}
 
 -- | A 'Prism'' into processing 'Instruction'
 class AsProcessingInstruction t where
