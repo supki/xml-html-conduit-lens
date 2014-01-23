@@ -17,8 +17,14 @@
 -- Useful traversals inspired by XPath
 ----------------------------------------------------------------------------
 module Text.XML.Lens
-  ( -- * Optics for 'Doctype'
-    Doctype
+  ( -- * Optics for 'Document'
+    Document
+  , AsDocument(..)
+  , root
+  , prologue
+  , epilogue
+    -- * Optics for 'Doctype'
+  , Doctype
   , doctype
     -- * Optics for 'Element'
   , Element
@@ -36,12 +42,6 @@ module Text.XML.Lens
   , instruction
     -- ** Children
   , entire
-    -- * Optics for 'Document'
-  , Document
-  , AsDocument(..)
-  , root
-  , prologue
-  , epilogue
     -- * Optics for 'Name'
   , Name
   , AsName(..)
@@ -84,6 +84,7 @@ import Text.XML.Lens.LowLevel
 -- >>> import           Data.List.Lens (prefixed)
 -- >>> import           Data.Text.Lens (unpacked)
 -- >>> import qualified Data.Text as Text
+-- >>> import qualified Text.XML as XML
 
 -- | Traverse itself with its all children.　Rewriting subnodes of each children will break a traversal law.
 entire :: Traversal' Element Element
@@ -118,8 +119,23 @@ epilogue :: AsDocument t => Traversal' t [Miscellaneous]
 epilogue = _Document . documentEpilogue
 {-# INLINE epilogue #-}
 
-doctype :: AsDocument t => Traversal' t (Maybe Doctype)
-doctype = prologue . prologueDoctype
+-- | A Lens into XML DOCTYPE declaration
+--
+-- >>> let xml = "<!DOCTYPE foo><root/>" :: TL.Text
+--
+-- >>> xml ^? prologue.doctype.folded.doctypeName
+-- Just "foo"
+--
+-- >>> xml & prologue.doctype.traverse.doctypeName .~ "moo"
+-- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE moo><root/>"
+--
+-- Since @doctype@'s a Lens, it's possible to attach DOCTYPE declaration
+-- to an XML document which didn't have it before:
+--
+-- >>> ("<root/>" :: TL.Text) & prologue.doctype ?~ XML.Doctype "moo" Nothing
+-- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE moo><root/>"
+doctype :: Lens' Prologue (Maybe Doctype)
+doctype = prologueDoctype
 {-# INLINE doctype #-}
 
 class AsElement t where
