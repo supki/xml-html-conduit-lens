@@ -32,3 +32,4 @@ library
     -Wall
   exposed-modules:
     Text.XML.Lens
+    Text.XML.Lens.LowLevel

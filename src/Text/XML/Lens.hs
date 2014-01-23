@@ -13,74 +13,53 @@
 -- Maintainer  :  Fumiaki Kinoshita <fumiexcel@gmail.com>
 -- Stability   :  experimental
 -- Portability :  non-portable
+--
 -- Useful traversals inspired by XPath
 ----------------------------------------------------------------------------
-module Text.XML.Lens (
-    -- * Optics for 'Doctype'
-      Doctype
-    , doctype
-    , doctypeName
-    , doctypeID
+module Text.XML.Lens
+  ( -- * Optics for 'Doctype'
+    Doctype
+  , doctype
     -- * Optics for 'Element'
-    , Element
-    , AsElement(..)
-    , nodes
-    , node
-    , named
-    , attributes
-    , elementName
-    , elementAttributes
-    , elementNodes
+  , Element
+  , AsElement(..)
+  , nodes
+  , node
+  , named
+  , attributed
+  , attr
+  , attrs
     -- * Prisms for 'Node'
-    , Node
-    , text
-    , comment
-    , instruction
-    , _NodeElement
-    , _NodeContent
-    , _NodeComment
-    , _NodeInstruction
-    -- ** Stuff
-    , attributed
-    , attr
-    , AsComment(..)
+  , Node
+  , text
+  , AsComment(..)
+  , instruction
     -- ** Children
-    , entire
+  , entire
     -- * Optics for 'Document'
-    , Document
-    , AsDocument(..)
-    , root
-    , prologue
-    , epilogue
-    , documentPrologue
-    , documentRoot
-    , documentEpilogue
-    -- * Optics for 'Prologue'
-    , prologueBefore
-    , prologueDoctype
-    , prologueAfter
-    -- * Lenses for 'Name'
-    , Name
-    , AsName(..)
-    , localName
-    , namespace
-    , prefix
-    , nameLocalName
-    , nameNamespace
-    , namePrefix
+  , Document
+  , AsDocument(..)
+  , root
+  , prologue
+  , epilogue
+    -- * Optics for 'Name'
+  , Name
+  , AsName(..)
+  , name
+  , namespace
+  , prefix
     -- * Optics for 'Instruction'
-    , Instruction
-    , AsProcessingInstruction(..)
-    , target
-    , data_
-    , instructionTarget
-    , instructionData
+  , Instruction
+  , AsProcessingInstruction(..)
+  , target
+  , data_
     -- * Optics for exceptions
-    , UnresolvedEntityException
-    , XMLException
-    , AsUnresolvedEntityException(..)
-    , AsXMLException(..)
-    ) where
+  , UnresolvedEntityException
+  , XMLException
+  , AsUnresolvedEntityException(..)
+  , AsXMLException(..)
+  , module Text.XML.Lens.LowLevel
+  ) where
 
 import           Control.Applicative
 import           Control.Exception (SomeException)
@@ -91,13 +70,14 @@ import qualified Data.Text.Lazy as TL
 import           Data.Text (Text)
 import           Data.Map (Map)
 import           Text.XML
-  ( Document, Doctype, Prologue, ExternalID
+  ( Document, Doctype, Prologue
   , Node(..)
   , Element(Element), Instruction, Name, Miscellaneous(..)
   , XMLException(..), UnresolvedEntityException(..)
   , parseLBS, parseText, renderLBS, renderText, def
   )
-import qualified Text.XML as XML
+
+import Text.XML.Lens.LowLevel
 
 -- $setup
 -- >>> :set -XOverloadedStrings
@@ -136,41 +116,9 @@ epilogue :: AsDocument t => Traversal' t [Miscellaneous]
 epilogue = _Document . documentEpilogue
 {-# INLINE epilogue #-}
 
-documentPrologue :: Lens' Document Prologue
-documentPrologue f doc = f (XML.documentPrologue doc) <&> \p -> doc { XML.documentPrologue = p}
-{-# INLINE documentPrologue #-}
-
-documentRoot :: Lens' Document Element
-documentRoot f doc = f (XML.documentRoot doc) <&> \p -> doc { XML.documentRoot = p}
-{-# INLINE documentRoot #-}
-
-documentEpilogue :: Lens' Document [Miscellaneous]
-documentEpilogue f doc =  f (XML.documentEpilogue doc) <&> \p -> doc { XML.documentEpilogue = p}
-{-# INLINE documentEpilogue #-}
-
 doctype :: AsDocument t => Traversal' t (Maybe Doctype)
-doctype = _Document . documentPrologue . prologueDoctype
+doctype = prologue . prologueDoctype
 {-# INLINE doctype #-}
-
-prologueBefore :: Lens' Prologue [Miscellaneous]
-prologueBefore f doc =  f (XML.prologueBefore doc) <&> \p -> doc { XML.prologueBefore = p }
-{-# INLINE prologueBefore #-}
-
-prologueDoctype :: Lens' Prologue (Maybe Doctype)
-prologueDoctype f doc =  f (XML.prologueDoctype doc) <&> \p -> doc { XML.prologueDoctype = p }
-{-# INLINE prologueDoctype #-}
-
-prologueAfter :: Lens' Prologue [Miscellaneous]
-prologueAfter f doc =  f (XML.prologueAfter doc) <&> \p -> doc { XML.prologueAfter = p }
-{-# INLINE prologueAfter #-}
-
-doctypeName :: Lens' Doctype Text
-doctypeName f doc =  f (XML.doctypeName doc) <&> \p -> doc { XML.doctypeName = p }
-{-# INLINE doctypeName #-}
-
-doctypeID :: Lens' Doctype (Maybe ExternalID)
-doctypeID f doc =  f (XML.doctypeID doc) <&> \p -> doc { XML.doctypeID = p }
-{-# INLINE doctypeID #-}
 
 class AsElement t where
   _Element :: Prism' t Element
@@ -225,11 +173,11 @@ nodes = _Element . elementNodes . traverse
 -- | Select nodes by name
 --
 -- >>> let xml = "<root><foo>4</foo><foo>7</foo><bar>11</bar></root>" :: TL.Text
--- >>> xml ^.. root.node "root".named "foo".localName
+-- >>> xml ^.. root.node "root".named "foo".name
 -- ["foo","foo"]
--- >>> xml ^? root.node "root".named "bar".localName
+-- >>> xml ^? root.node "root".named "bar".name
 -- Just "bar"
--- >>> xml ^? root.node "root".named "baz".localName
+-- >>> xml ^? root.node "root".named "baz".name
 -- Nothing
 named :: AsElement t => Name -> Traversal' t Element
 named n = _Element . filtered (has (elementName.only n))
@@ -249,62 +197,27 @@ attributed p = _Element . filtered (has (elementAttributes . p))
 -- | Look into the nodes one level deeper
 --
 -- >>> let xml = "<root><foo>4</foo><foo>7</foo><bar>11</bar></root>" :: TL.Text
--- >>> xml ^.. root.plate.localName
+-- >>> xml ^.. root.plate.name
 -- ["foo","foo","bar"]
 instance Plated Node where
   plate = nodes
   {-# INLINE plate #-}
 
-_NodeElement :: Prism' Node Element
-_NodeElement = prism' NodeElement (\s -> case s of NodeElement e -> Just e; _ -> Nothing)
-{-# INLINE _NodeElement #-}
+text :: Prism' Node Text
+text = _NodeContent
+{-# INLINE text #-}
 
-_NodeComment :: Prism' Node Text
-_NodeComment = prism' NodeComment (\s -> case s of NodeComment e -> Just e; _ -> Nothing)
-{-# INLINE _NodeComment #-}
-
-_NodeContent :: Prism' Node Text
-_NodeContent = prism' NodeContent (\s -> case s of NodeContent e -> Just e; _ -> Nothing)
-{-# INLINE _NodeContent #-}
-
-_NodeInstruction :: Prism' Node Instruction
-_NodeInstruction = prism' NodeInstruction (\s -> case s of NodeInstruction e -> Just e; _ -> Nothing)
-{-# INLINE _NodeInstruction #-}
-
-elementName :: Lens' Element Name
-elementName f e = f (XML.elementName e) <&> \p -> e { XML.elementName = p }
-{-# INLINE elementName #-}
-
-elementAttributes :: Lens' Element (Map Name Text)
-elementAttributes f e = f (XML.elementAttributes e) <&> \p -> e { XML.elementAttributes = p }
-{-# INLINE elementAttributes #-}
-
-elementNodes :: Lens' Element [Node]
-elementNodes f e = f (XML.elementNodes e) <&> \p -> e { XML.elementNodes = p }
-{-# INLINE elementNodes #-}
+instruction :: Prism' Node Instruction
+instruction = _NodeInstruction
+{-# INLINE instruction #-}
 
 attr :: AsElement t => Name -> IndexedTraversal' Name t Text
 attr n = _Element . elementAttributes . ix n
 {-# INLINE attr #-}
 
-attributes :: AsElement t => IndexedTraversal' Name t Text
-attributes = _Element . elementAttributes . itraversed
-{-# INLINE attributes #-}
-
--- | Traverse node text.
-text :: Traversal' Node Text
-text = _NodeContent
-{-# INLINE text #-}
-
--- | Traverse node comment.
-comment :: Traversal' Node Text
-comment = _NodeComment
-{-# INLINE comment #-}
-
--- | Traverse node instruction.
-instruction :: Traversal' Node Instruction
-instruction = _NodeInstruction
-{-# INLINE instruction #-}
+attrs :: AsElement t => IndexedTraversal' Name t Text
+attrs = _Element . elementAttributes . itraversed
+{-# INLINE attrs #-}
 
 -- | A 'Prism'' into processing 'Instruction'
 class AsProcessingInstruction t where
@@ -315,7 +228,7 @@ instance AsProcessingInstruction Instruction where
   {-# INLINE _Instruction #-}
 
 instance AsProcessingInstruction Node where
-  _Instruction = _NodeInstruction
+  _Instruction = instruction
   {-# INLINE _Instruction #-}
 
 instance AsProcessingInstruction Miscellaneous where
@@ -330,68 +243,48 @@ data_ :: AsProcessingInstruction t => Traversal' t Text
 data_ = _Instruction . instructionData
 {-# INLINE data_ #-}
 
-instructionTarget :: Lens' Instruction Text
-instructionTarget f i = f (XML.instructionTarget i) <&> \p -> i { XML.instructionTarget = p }
-{-# INLINE instructionTarget #-}
-
-instructionData :: Lens' Instruction Text
-instructionData f i = f (XML.instructionData i) <&> \p -> i { XML.instructionData = p }
-{-# INLINE instructionData #-}
-
 -- | A 'Prism'' into XML comment
 class AsComment t where
-  _Comment :: Prism' t Text
+  comment :: Prism' t Text
 
 instance AsComment Text where
-  _Comment = id
-  {-# INLINE _Comment #-}
+  comment = id
+  {-# INLINE comment #-}
 
 instance AsComment Node where
-  _Comment = _NodeComment
-  {-# INLINE _Comment #-}
+  comment = _NodeComment
+  {-# INLINE comment #-}
 
 instance AsComment Miscellaneous where
-  _Comment = prism' MiscComment (\s -> case s of MiscComment e -> Just e; _ -> Nothing)
-  {-# INLINE _Comment #-}
+  comment = prism' MiscComment (\s -> case s of MiscComment e -> Just e; _ -> Nothing)
+  {-# INLINE comment #-}
 
 class AsName t where
-  name :: Traversal' t Name
+  _Name :: Traversal' t Name
 
 instance AsName Name where
-  name = id
-  {-# INLINE name #-}
+  _Name = id
+  {-# INLINE _Name #-}
 
 instance AsName Element where
-  name = elementName
-  {-# INLINE name #-}
+  _Name = elementName
+  {-# INLINE _Name #-}
 
 instance AsName Node where
-  name = _NodeElement . name
-  {-# INLINE name #-}
+  _Name = _NodeElement . _Name
+  {-# INLINE _Name #-}
 
-localName :: AsName t => Traversal' t Text
-localName = name . nameLocalName
-{-# INLINE localName #-}
+name :: AsName t => Traversal' t Text
+name = _Name . nameLocalName
+{-# INLINE name #-}
 
 namespace :: AsName t => Traversal' t (Maybe Text)
-namespace = name . nameNamespace
+namespace = _Name . nameNamespace
 {-# INLINE namespace #-}
 
 prefix :: AsName t => Traversal' t (Maybe Text)
-prefix = name . namePrefix
+prefix = _Name . namePrefix
 {-# INLINE prefix #-}
-
-nameLocalName :: Lens' Name Text
-nameLocalName f n = f (XML.nameLocalName n) <&> \p -> n { XML.nameLocalName = p }
-{-# INLINE nameLocalName #-}
-
-nameNamespace :: Lens' Name (Maybe Text)
-nameNamespace f n = f (XML.nameNamespace n) <&> \p -> n { XML.nameNamespace = p }
-{-# INLINE nameNamespace #-}
-
-namePrefix :: Lens' Name (Maybe Text)
-namePrefix f n = f (XML.namePrefix n) <&> \p -> n { XML.namePrefix = p }
-{-# INLINE namePrefix #-}
 
 class AsUnresolvedEntityException p f t where
   _UnresolvedEntityException :: Overloaded' p f t UnresolvedEntityException
