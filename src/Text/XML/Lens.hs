@@ -56,6 +56,11 @@ module Text.XML.Lens
   , XMLException
   , AsUnresolvedEntityException(..)
   , AsXMLException(..)
+  , _MissingRootElement
+  , _ContentAfterRoot
+  , _InvalidInlineDoctype
+  , _MissingEndElement
+  , _UnterminatedInlineDoctype
   , module Text.XML.Lens.LowLevel
   ) where
 
@@ -75,6 +80,8 @@ import           Text.XML
   , XMLException(..), UnresolvedEntityException(..)
   , parseLBS, parseText, renderLBS, renderText, def
   )
+import           Text.XML.Stream.Parse (EventPos)
+import           Text.XML.Unresolved (InvalidEventStream(..))
 
 import Text.XML.Lens.LowLevel
 
@@ -385,6 +392,7 @@ prefix :: AsName t => Lens' t (Maybe Text)
 prefix = _Name . namePrefix
 {-# INLINE prefix #-}
 
+-- | @xml-conduit@ entity resolving exceptions overloading
 class AsUnresolvedEntityException p f t where
   _UnresolvedEntityException :: Overloaded' p f t UnresolvedEntityException
 
@@ -406,3 +414,53 @@ instance AsXMLException p f XMLException where
 instance (Applicative f, Choice p) => AsXMLException p f SomeException where
   _XMLException = exception
   {-# INLINE _XMLException #-}
+
+-- | @xml-conduit@ XML parsing exceptions overloading
+class AsInvalidEventStream p f t where
+  _InvalidEventStream :: Overloaded' p f t InvalidEventStream
+
+instance AsInvalidEventStream p f InvalidEventStream where
+  _InvalidEventStream = id
+
+instance (Applicative f, Choice p) => AsInvalidEventStream p f SomeException where
+  _InvalidEventStream = exception
+
+-- | A Prism into 'ContentAfterRoot'
+_ContentAfterRoot
+  :: (Applicative f, Choice p, AsInvalidEventStream p f t)
+  => Overloaded' p f t EventPos
+_ContentAfterRoot = _InvalidEventStream
+  . prism' ContentAfterRoot (\s -> case s of ContentAfterRoot e -> Just e; _ -> Nothing)
+{-# INLINE _ContentAfterRoot #-}
+
+-- | A Prism into 'MissingRootElement'
+_MissingRootElement
+  :: (Applicative f, Choice p, AsInvalidEventStream p f t)
+  => Overloaded' p f t ()
+_MissingRootElement = _InvalidEventStream
+  . prism' (const MissingRootElement) (\s -> case s of MissingRootElement -> Just (); _ -> Nothing)
+{-# INLINE _MissingRootElement #-}
+
+-- | A Prism into 'InvalidInlineDoctype'
+_InvalidInlineDoctype
+  :: (Applicative f, Choice p, AsInvalidEventStream p f t)
+  => Overloaded' p f t EventPos
+_InvalidInlineDoctype = _InvalidEventStream
+  . prism' InvalidInlineDoctype (\s -> case s of InvalidInlineDoctype e -> Just e; _ -> Nothing)
+{-# INLINE _InvalidInlineDoctype #-}
+
+-- | A Prism into 'MissingEndElement'
+_MissingEndElement
+  :: (Applicative f, Choice p, AsInvalidEventStream p f t)
+  => Overloaded' p f t (Name, Maybe EventPos)
+_MissingEndElement = _InvalidEventStream
+  . prism' (uncurry MissingEndElement) (\s -> case s of MissingEndElement e p -> Just (e, p); _ -> Nothing)
+{-# INLINE _MissingEndElement #-}
+
+-- | A Prism into 'UnterminatedInlineDoctype'
+_UnterminatedInlineDoctype
+  :: (Applicative f, Choice p, AsInvalidEventStream p f t)
+  => Overloaded' p f t ()
+_UnterminatedInlineDoctype = _InvalidEventStream
+  . prism' (const UnterminatedInlineDoctype) (\s -> case s of UnterminatedInlineDoctype -> Just (); _ -> Nothing)
+{-# INLINE _UnterminatedInlineDoctype #-}
