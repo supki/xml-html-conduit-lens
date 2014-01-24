@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main (main) where
 
+import           Control.Error (note)              -- errors
 import           Control.Lens                      -- lens
 import           Data.Monoid (Monoid, First)       -- base
 import           Data.Text (Text)                  -- text
@@ -11,19 +12,23 @@ import           System.Exit (exitFailure)         -- base
 import           System.IO (stderr)                -- base
 import           Text.XML.Lens                     -- xml-lens
 
+{-# ANN module ("HLint: ignore Avoid lambda" :: String) #-}
+
 
 main :: IO ()
-main = do
-  htmlBS <- simpleHttp "http://pogoda.yandex.ru/zelenograd/"
-  case htmlBS ^? html of
-    Nothing ->
-      die "Invalid HTML, no weather for you!"
-    Just htmlDoc ->
-      case mapM (htmlDoc ^?) [temperature, category.unicoded] of
-        Nothing ->
-          die "Valid but unparseable HTML, no weather for you!"
-        Just w ->
-          Text.putStrLn (Text.unwords w)
+main = simpleHttp "http://pogoda.yandex.ru/zelenograd/" >>= either die Text.putStrLn . parseWeather
+
+-- | Parse yandex response. The following errors are possible:
+--
+--   * HTML served may be invalid
+--   * HTML served may not have temperature and weather condition in it
+parseWeather :: AsHtmlDocument t => t -> Either Text Text
+parseWeather raw = do
+  htmlDoc <- note "Invalid HTML, no weather for you!" $
+    preview html raw
+  weather <- note "Valid but unparseable HTML, no weather for you!" $
+    mapM (\l -> preview l htmlDoc) [temperature, condition.unicoded]
+  return (Text.unwords weather)
 
 -- | Parse temperature from HTML document encoded as
 --
@@ -33,15 +38,15 @@ main = do
 temperature :: Getting (First Text) Element Text
 temperature = (//).attributed (ix "class".only "b-thermometer__now").text
 
--- | Parse weather category from HTML document encoded as
+-- | Parse weather condition from HTML document encoded as
 --
 -- @
--- <div class="b-info-item b-info-item_type_fact-big">$category</div>
+-- <div class="b-info-item b-info-item_type_fact-big">$condition</div>
 -- @
-category :: Getting (First Text) Element Text
-category = (//).attributed (ix "class".only "b-info-item b-info-item_type_fact-big").text
+condition :: Getting (First Text) Element Text
+condition = (//).attributed (ix "class".only "b-info-item b-info-item_type_fact-big").text
 
--- | Get a nice unicode "picture" for a weather category
+-- | Get a nice unicode "picture" for a weather condition
 unicoded :: Getting (First Text) Text Text
 unicoded = prism' id $ \str -> case str of
   "ясно"    -> Just "☀"

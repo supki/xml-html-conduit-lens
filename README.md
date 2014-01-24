@@ -1,7 +1,7 @@
 xml-lens
 ========
 
-Optics for [xml-conduit](http://hackage.haskell.org/package/xml-conduit).
+Optics for [xml-conduit][0] and [html-conduit][1]
 
 Examples
 --------
@@ -12,8 +12,8 @@ First, let's prepare the environment
 >>> :set -XOverloadedStrings
 >>> import Text.XML.Lens
 >>> import qualified Data.Text.Lazy.IO as T
->>> xml <- T.readFile "examples/books.xml"
->>> T.putStr xml
+>>> doc <- T.readFile "examples/books.xml"
+>>> T.putStr doc
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <books>
 <book category="Language and library definition">
@@ -56,42 +56,42 @@ First, let's prepare the environment
 List titles of books in "Textbooks" category:
 
 ```
->>> xml ^.. root.plate.attributed (ix "category".only "Textbooks").node "title".text
+>>> doc ^.. xml.plate.attributed (ix "category".only "Textbooks").node "title".text
 ["Learn You a Haskell for Great Good!","Programming in Haskell","Real World Haskell"]
 ```
 
 List authors of books longer then 500 pages:
 
 ```
->>> xml ^.. root.plate.filtered (has (node "pages".text.filtered (> "500"))).node "author".text
+>>> doc ^.. xml.plate.filtered (has (node "pages".text.filtered (> "500"))).node "author".text
 ["Bryan O'Sullivan, Don Stewart, and John Goerzen","Benjamin C. Pierce"]
 ```
 
 List all tags from top to bottom:
 
 ```
->>> xml ^.. root.to universe.folded.name
+>>> doc ^.. xml.to universe.folded.name
 ["books","book","title","author","pages","price","book","title","author","pages","book","title","author","pages","book","title","author","pages","book","title","author","pages","book","title","author","pages","book","title","author"]
 ```
 
 Compute the length of the books list:
 
 ```
->>> xml & lengthOf (root.plate)
+>>> doc & lengthOf (xml.plate)
 7
 ```
 
 Find the title of the first book in "Joke" category:
 
 ```
->>> xml ^? root.plate.attributed (ix "category".only "Joke").node "title".text
+>>> doc ^? xml.plate.attributed (ix "category".only "Joke").node "title".text
 Just "Functional Ikamusume"
 ```
 
 Append the string " pages" to each `<pages>` tag contents:
 
 ```
->>> xml & root.plate.node "pages".text <>~ " pages" & TL.putStr
+>>> doc & xml.plate.node "pages".text <>~ " pages" & T.putStr
 <?xml version="1.0" encoding="UTF-8"?><books>
 <book category="Language and library definition">
     <title>Haskell 98 language and libraries: the Revised Report</title>
@@ -130,3 +130,6 @@ Append the string " pages" to each `<pages>` tag contents:
 </book>
 </books>
 ```
+
+  [0]: http://hackage.haskell.org/package/xml-conduit
+  [1]: http://hackage.haskell.org/package/html-conduit

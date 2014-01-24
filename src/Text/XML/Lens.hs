@@ -19,49 +19,52 @@
 module Text.XML.Lens
   ( -- * Optics for 'Document'
     Document
-  , AsXmlDocument(..)
+  , xml
+  , html
   , root
   , prologue
   , epilogue
-  , html
+  , AsXmlDocument(..)
+  , AsHtmlDocument(..)
     -- * Optics for 'Doctype'
   , Doctype
   , doctype
     -- * Optics for 'Element'
   , Element
-  , AsElement(..)
   , nodes
   , node
   , named
   , attributed
   , attr
   , attrs
+  , AsElement(..)
     -- * Prisms for 'Node'
   , Node
   , text
-  , AsComment(..)
   , instruction
+  , AsComment(..)
     -- * Optics for 'Name'
   , Name
-  , AsName(..)
   , name
   , namespace
   , prefix
+  , AsName(..)
     -- * Optics for 'Instruction'
   , Instruction
-  , AsProcessingInstruction(..)
   , target
   , data_
+  , AsProcessingInstruction(..)
     -- * Optics for exceptions
   , UnresolvedEntityException
   , XMLException
-  , AsUnresolvedEntityException(..)
-  , AsXMLException(..)
   , _MissingRootElement
   , _ContentAfterRoot
   , _InvalidInlineDoctype
   , _MissingEndElement
   , _UnterminatedInlineDoctype
+  , AsUnresolvedEntityException(..)
+  , AsXMLException(..)
+  , AsInvalidEventStream(..)
   , module Text.XML.Lens.LowLevel
   ) where
 
@@ -125,29 +128,21 @@ _XmlDocument :: AsXmlDocument t => Prism' t Document
 _XmlDocument = _XmlDocumentWith def def
 {-# INLINE _XmlDocument #-}
 
-prologue :: AsXmlDocument t => Traversal' t Prologue
-prologue = _XmlDocument . documentPrologue
-{-# INLINE prologue #-}
-
 -- | A Traversal into XML document root node
 --
--- >>> ("<foo/>" :: TL.Text) ^? root.name
+-- >>> ("<foo/>" :: TL.Text) ^? xml.name
 -- Just "foo"
 --
--- >>> ("<foo><bar/><baz/></foo>" :: TL.Text) ^? root.name
+-- >>> ("<foo><bar/><baz/></foo>" :: TL.Text) ^? xml.name
 -- Just "foo"
 --
--- >>> ("<foo/>" :: TL.Text) & root.name .~ "boo"
+-- >>> ("<foo/>" :: TL.Text) & xml.name .~ "boo"
 -- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><boo/>"
-root :: AsXmlDocument t => Traversal' t Element
-root = _XmlDocument . documentRoot
-{-# INLINE root #-}
+xml :: AsXmlDocument t => Traversal' t Element
+xml = _XmlDocument . documentRoot
+{-# INLINE xml #-}
 
-epilogue :: AsXmlDocument t => Traversal' t [Miscellaneous]
-epilogue = _XmlDocument . documentEpilogue
-{-# INLINE epilogue #-}
-
--- | A Traversal into HTML document root node
+-- | A Fold into HTML document root node
 --
 -- Not every parseable HTML document is a valid XML document:
 --
@@ -156,20 +151,33 @@ epilogue = _XmlDocument . documentEpilogue
 -- >>> quasiXml ^.. html.plate.name
 -- ["br","br"]
 --
--- >>> quasiXml ^? root.plate.name
+-- >>> quasiXml ^? xml.plate.name
 -- Nothing
 html :: AsHtmlDocument t => Fold t Element
 html = _HtmlDocument . documentRoot
 {-# INLINE html #-}
 
+-- | An alias for 'xml'
+root :: AsXmlDocument t => Traversal' t Element
+root = xml
+{-# INLINE root #-}
+
+prologue :: AsXmlDocument t => Traversal' t Prologue
+prologue = _XmlDocument . documentPrologue
+{-# INLINE prologue #-}
+
+epilogue :: AsXmlDocument t => Traversal' t [Miscellaneous]
+epilogue = _XmlDocument . documentEpilogue
+{-# INLINE epilogue #-}
+
 -- | A Lens into XML DOCTYPE declaration
 --
--- >>> let xml = "<!DOCTYPE foo><root/>" :: TL.Text
+-- >>> let doc = "<!DOCTYPE foo><root/>" :: TL.Text
 --
--- >>> xml ^? prologue.doctype.folded.doctypeName
+-- >>> doc ^? prologue.doctype.folded.doctypeName
 -- Just "foo"
 --
--- >>> xml & prologue.doctype.traverse.doctypeName .~ "moo"
+-- >>> doc & prologue.doctype.traverse.doctypeName .~ "moo"
 -- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE moo><root/>"
 --
 -- Since @doctype@'s a Lens, it's possible to attach DOCTYPE declaration
@@ -209,12 +217,12 @@ instance Applicative f => Ixed f Element where
 -- plate ≡ nodes
 -- @
 --
--- >>> let xml = "<root><foo>4</foo><foo>7</foo><bar>11</bar></root>" :: TL.Text
+-- >>> let doc = "<root><foo>4</foo><foo>7</foo><bar>11</bar></root>" :: TL.Text
 --
--- >>> xml ^.. root.plate.name
+-- >>> doc ^.. xml.plate.name
 -- ["foo","foo","bar"]
 --
--- >>> xml & partsOf (root.plate.name) .~ ["boo", "hoo", "moo"]
+-- >>> doc & partsOf (root.plate.name) .~ ["boo", "hoo", "moo"]
 -- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root><boo>4</boo><hoo>7</hoo><moo>11</moo></root>"
 instance Plated Element where
   plate = elementNodes . traverse . _NodeElement
@@ -222,15 +230,15 @@ instance Plated Element where
 
 -- | Look into the nodes one level deeper with specific names
 --
--- >>> let xml = "<root><foo>boo</foo><foo>hoo</foo><bar>moo</bar></root>" :: TL.Text
+-- >>> let doc = "<root><foo>boo</foo><foo>hoo</foo><bar>moo</bar></root>" :: TL.Text
 --
--- >>> xml ^. root.node "foo".text
+-- >>> doc ^. xml.node "foo".text
 -- "boohoo"
 --
--- >>> xml ^? root.node "bar".text
+-- >>> doc ^? xml.node "bar".text
 -- Just "moo"
 --
--- >>> xml ^? root.node "baz".text
+-- >>> doc ^? xml.node "baz".text
 -- Nothing
 node :: AsElement t => Name -> Traversal' t Element
 node n = _Element . elementNodes . traverse . named n
@@ -238,12 +246,12 @@ node n = _Element . elementNodes . traverse . named n
 
 -- | Look into the nodes one level deeper
 --
--- >>> let xml = "<root><foo>boo</foo><foo>hoo</foo><bar>moo</bar></root>" :: TL.Text
+-- >>> let doc = "<root><foo>boo</foo><foo>hoo</foo><bar>moo</bar></root>" :: TL.Text
 --
--- >>> xml ^. root.nodes.text
+-- >>> doc ^. xml.nodes.text
 -- "boohoomoo"
 --
--- >>> xml ^? root.node "moot".text
+-- >>> doc ^? xml.node "moot".text
 -- Nothing
 nodes :: AsElement t => Traversal' t Element
 nodes = _Element . plate
@@ -251,15 +259,15 @@ nodes = _Element . plate
 
 -- | Select nodes by name
 --
--- >>> let xml = "<root><foo>4</foo><foo>7</foo><bar>11</bar></root>" :: TL.Text
+-- >>> let doc = "<root><foo>4</foo><foo>7</foo><bar>11</bar></root>" :: TL.Text
 --
--- >>> xml ^.. root.nodes.named "foo".name
+-- >>> doc ^.. xml.nodes.named "foo".name
 -- ["foo","foo"]
 --
--- >>> xml ^? root.nodes.named "bar".name
+-- >>> doc ^? xml.nodes.named "bar".name
 -- Just "bar"
 --
--- >>> xml ^? root.nodes.named "baz".name
+-- >>> doc ^? xml.nodes.named "baz".name
 -- Nothing
 named :: AsElement t => Name -> Traversal' t Element
 named n = _Element . filtered (has (elementName.only n))
@@ -267,12 +275,12 @@ named n = _Element . filtered (has (elementName.only n))
 
 -- | Select nodes by attributes' values
 --
--- >>> let xml = "<root><foo bar=\"baz\">4</foo><foo bar=\"quux\">7</foo><bar bar=\"baz\">11</bar></root>" :: TL.Text
+-- >>> let doc = "<root><foo bar=\"baz\">4</foo><foo bar=\"quux\">7</foo><bar bar=\"baz\">11</bar></root>" :: TL.Text
 --
--- >>> xml ^.. root.plate.attributed (ix "bar".only "baz").text
+-- >>> doc ^.. xml.plate.attributed (ix "bar".only "baz").text
 -- ["4","11"]
 --
--- >>> xml ^? root.plate.attributed (folded.to Text.length.only 4).text
+-- >>> doc ^? xml.plate.attributed (folded.to Text.length.only 4).text
 -- Just "7"
 attributed :: AsElement t => Fold (Map Name Text) a -> Traversal' t Element
 attributed p = _Element . filtered (has (elementAttributes . p))
@@ -280,12 +288,12 @@ attributed p = _Element . filtered (has (elementAttributes . p))
 
 -- | Node text contents
 --
--- >>> let xml = "<root>boo</root>" :: TL.Text
+-- >>> let doc = "<root>boo</root>" :: TL.Text
 --
--- >>> xml ^? root.text
+-- >>> doc ^? xml.text
 -- Just "boo"
 --
--- >>> xml & root.text <>~ "hoo"
+-- >>> doc & xml.text <>~ "hoo"
 -- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root>boohoo</root>"
 text :: Traversal' Element Text
 text = elementNodes . traverse . _NodeContent
@@ -293,15 +301,15 @@ text = elementNodes . traverse . _NodeContent
 
 -- | Select node attributes by name
 --
--- >>> let xml = "<root><foo bar=\"baz\" qux=\"quux\"/><foo qux=\"xyzzy\"/></root>" :: TL.Text
+-- >>> let doc = "<root><foo bar=\"baz\" qux=\"quux\"/><foo qux=\"xyzzy\"/></root>" :: TL.Text
 --
--- >>> xml ^.. root.plate.attr "qux"
+-- >>> doc ^.. xml.plate.attr "qux"
 -- ["quux","xyzzy"]
 --
--- >>> xml ^.. root.plate.attr "bar"
+-- >>> doc ^.. xml.plate.attr "bar"
 -- ["baz"]
 --
--- >>> xml & root.plate.attr "qux" %~ Text.reverse
+-- >>> doc & xml.plate.attr "qux" %~ Text.reverse
 -- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root><foo bar=\"baz\" qux=\"xuuq\"/><foo qux=\"yzzyx\"/></root>"
 attr :: AsElement t => Name -> IndexedTraversal' Name t Text
 attr n = _Element . elementAttributes . ix n
@@ -309,12 +317,12 @@ attr n = _Element . elementAttributes . ix n
 
 -- | Traverse node attributes
 --
--- >>> let xml = "<root><foo bar=\"baz\" qux=\"zap\"/><foo quux=\"xyzzy\"/></root>" :: TL.Text
+-- >>> let doc = "<root><foo bar=\"baz\" qux=\"zap\"/><foo quux=\"xyzzy\"/></root>" :: TL.Text
 --
--- >>> xml ^.. root.plate.attrs.indices (has (name.unpacked.prefixed "qu"))
+-- >>> doc ^.. xml.plate.attrs.indices (has (name.unpacked.prefixed "qu"))
 -- ["zap","xyzzy"]
 --
--- >>> xml & root.plate.attrs %~ Text.toUpper
+-- >>> doc & xml.plate.attrs %~ Text.toUpper
 -- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root><foo bar=\"BAZ\" qux=\"ZAP\"/><foo quux=\"XYZZY\"/></root>"
 attrs :: AsElement t => IndexedTraversal' Name t Text
 attrs = _Element . elementAttributes . itraversed
@@ -377,13 +385,13 @@ instance AsName Element where
 
 -- | A Lens into node name
 --
--- >>> ("<root/>" :: TL.Text) ^. root.name
+-- >>> ("<root/>" :: TL.Text) ^. xml.name
 -- "root"
 --
--- >>> ("<root><foo/><bar/><baz/></root>" :: TL.Text) ^.. root.plate.name
+-- >>> ("<root><foo/><bar/><baz/></root>" :: TL.Text) ^.. xml.plate.name
 -- ["foo","bar","baz"]
 --
--- >>> ("<root><foo/><bar/><baz></root>" :: TL.Text) & root.partsOf (plate.name) .~ ["boo", "hoo", "moo"]
+-- >>> ("<root><foo/><bar/><baz></root>" :: TL.Text) & xml.partsOf (plate.name) .~ ["boo", "hoo", "moo"]
 -- "<root><foo/><bar/><baz></root>"
 name :: AsName t => Lens' t Text
 name = _Name . nameLocalName
@@ -391,13 +399,13 @@ name = _Name . nameLocalName
 
 -- | A Lens into node namespace
 --
--- >>> ("<root/>" :: TL.Text) ^. root.namespace
+-- >>> ("<root/>" :: TL.Text) ^. xml.namespace
 -- Nothing
 --
--- >>> ("<root/>" :: TL.Text) & root.namespace ?~ "foo"
+-- >>> ("<root/>" :: TL.Text) & xml.namespace ?~ "foo"
 -- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root xmlns=\"foo\"/>"
 --
--- >>> ("<root xmlns=\"foo\"/>" :: TL.Text) & root.namespace .~ Nothing
+-- >>> ("<root xmlns=\"foo\"/>" :: TL.Text) & xml.namespace .~ Nothing
 -- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root/>"
 namespace :: AsName t => Lens' t (Maybe Text)
 namespace = _Name . nameNamespace
@@ -405,16 +413,16 @@ namespace = _Name . nameNamespace
 
 -- | A Lens into node namespace
 --
--- >>> ("<root/>" :: TL.Text) ^. root.prefix
+-- >>> ("<root/>" :: TL.Text) ^. xml.prefix
 -- Nothing
 --
--- >>> ("<root/>" :: TL.Text) & root.prefix ?~ "foo"
+-- >>> ("<root/>" :: TL.Text) & xml.prefix ?~ "foo"
 -- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root/>"
 --
--- >>> ("<root xmlns=\"foo\"/>" :: TL.Text) & root.prefix ?~ "foo"
+-- >>> ("<root xmlns=\"foo\"/>" :: TL.Text) & xml.prefix ?~ "foo"
 -- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><foo:root xmlns:foo=\"foo\"/>"
 --
--- >>> ("<?xml version=\"1.0\" encoding=\"UTF-8\"?><foo:root xmlns:foo=\"foo\"/>" :: TL.Text) & root.prefix .~ Nothing
+-- >>> ("<?xml version=\"1.0\" encoding=\"UTF-8\"?><foo:root xmlns:foo=\"foo\"/>" :: TL.Text) & xml.prefix .~ Nothing
 -- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root xmlns=\"foo\"/>"
 prefix :: AsName t => Lens' t (Maybe Text)
 prefix = _Name . namePrefix
