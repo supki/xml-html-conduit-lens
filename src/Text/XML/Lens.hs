@@ -40,8 +40,6 @@ module Text.XML.Lens
   , text
   , AsComment(..)
   , instruction
-    -- ** Children
-  , entire
     -- * Optics for 'Name'
   , Name
   , AsName(..)
@@ -73,7 +71,7 @@ import           Text.XML
   ( ParseSettings, RenderSettings
   , Document, Doctype, Prologue
   , Node(..)
-  , Element(Element), Instruction, Name, Miscellaneous(..)
+  , Element, Instruction, Name, Miscellaneous(..)
   , XMLException(..), UnresolvedEntityException(..)
   , parseLBS, parseText, renderLBS, renderText, def
   )
@@ -86,11 +84,6 @@ import Text.XML.Lens.LowLevel
 -- >>> import           Data.Text.Lens (unpacked)
 -- >>> import qualified Data.Text as Text
 -- >>> import qualified Text.XML as XML
-
--- | Traverse itself with its all children.　Rewriting subnodes of each children will break a traversal law.
-entire :: Traversal' Element Element
-entire f e@(Element _ _ ns) = com <$> f e <*> traverse (_NodeElement (entire f)) ns where
-    com (Element n a _) = Element n a
 
 -- | A 'Prism'' into XML 'Document'
 class AsDocument t where

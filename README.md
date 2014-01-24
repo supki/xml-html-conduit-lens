@@ -63,7 +63,7 @@ List titles of books in "Textbooks" category:
 List authors of books longer then 500 pages:
 
 ```
->>> xml ^.. xml ^.. root.plate.filtered (has (node "pages".text.filtered (> "500"))).node "author".text
+>>> xml ^.. root.plate.filtered (has (node "pages".text.filtered (> "500"))).node "author".text
 ["Bryan O'Sullivan, Don Stewart, and John Goerzen","Benjamin C. Pierce"]
 ```
 
