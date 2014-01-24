@@ -17,7 +17,7 @@
 -- Useful traversals inspired by XPath
 ----------------------------------------------------------------------------
 module Text.XML.Lens
-  ( -- * Optics for 'Document'
+  ( -- * Document
     Document
   , xml
   , html
@@ -26,34 +26,33 @@ module Text.XML.Lens
   , epilogue
   , AsXmlDocument(..)
   , AsHtmlDocument(..)
-    -- * Optics for 'Doctype'
+    -- * Doctype
   , Doctype
   , doctype
-    -- * Optics for 'Element'
+    -- * Element
   , Element
   , node
   , named
-  , attributed
-  , attr
   , attrs
-  , comments
-  , AsElement(..)
-    -- * Optics for 'Node'
-  , Node
+  , attr
+  , attributed
   , text
+  , comments
+    -- * Node
+  , Node
   , instruction
-    -- * Optics for 'Name'
+    -- * Name
   , Name
   , name
   , namespace
   , prefix
   , AsName(..)
-    -- * Optics for 'Instruction'
+    -- * Instruction
   , Instruction
   , target
   , data_
   , AsProcessingInstruction(..)
-    -- * Optics for exceptions
+    -- * exceptions
   , UnresolvedEntityException
   , XMLException
   , _MissingRootElement
@@ -96,7 +95,7 @@ import Text.XML.Lens.LowLevel
 -- >>> import qualified Data.Text as Text
 -- >>> import qualified Text.XML as XML
 
--- | A 'Prism'' into XML 'Document'
+-- | XML document parsing and rendering overloading
 class AsXmlDocument t where
   _XmlDocumentWith :: ParseSettings -> RenderSettings -> Prism' t Document
 
@@ -112,6 +111,7 @@ instance AsXmlDocument TL.Text where
   _XmlDocumentWith ps rs = prism' (renderText rs) (either (const Nothing) Just . parseText ps)
   {-# INLINE _XmlDocumentWith #-}
 
+-- | HTML document parsing overloading
 class AsHtmlDocument t where
   _HtmlDocument :: Fold t Document
 
@@ -188,17 +188,6 @@ doctype :: Lens' Prologue (Maybe Doctype)
 doctype = prologueDoctype
 {-# INLINE doctype #-}
 
-class AsElement t where
-  _Element :: Prism' t Element
-
-instance AsElement Element where
-  _Element = id
-  {-# INLINE _Element #-}
-
-instance AsElement Node where
-  _Element = _NodeElement
-  {-# INLINE _Element #-}
-
 type instance Index Element = Name
 type instance IxValue Element = Text
 
@@ -235,8 +224,8 @@ instance Plated Element where
 --
 -- >>> doc ^? xml.node "baz".text
 -- Nothing
-node :: AsElement t => Name -> Traversal' t Element
-node n = _Element . elementNodes . traverse . named n
+node :: Name -> Traversal' Element Element
+node n = elementNodes . traverse . _NodeElement . named n
 {-# INLINE node #-}
 
 -- | Select nodes by name
@@ -251,9 +240,38 @@ node n = _Element . elementNodes . traverse . named n
 --
 -- >>> doc ^? xml.plate.named "baz".name
 -- Nothing
-named :: AsElement t => Name -> Traversal' t Element
-named n = _Element . filtered (has (elementName.only n))
+named :: Name -> Traversal' Element Element
+named n = filtered (has (elementName.only n))
 {-# INLINE named #-}
+
+-- | Traverse node attributes
+--
+-- >>> let doc = "<root><foo bar=\"baz\" qux=\"zap\"/><foo quux=\"xyzzy\"/></root>" :: TL.Text
+--
+-- >>> doc ^.. xml.plate.attrs.indices (has (name.unpacked.prefixed "qu"))
+-- ["zap","xyzzy"]
+--
+-- >>> doc & xml.plate.attrs %~ Text.toUpper
+-- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root><foo bar=\"BAZ\" qux=\"ZAP\"/><foo quux=\"XYZZY\"/></root>"
+attrs :: IndexedTraversal' Name Element Text
+attrs = elementAttributes . itraversed
+{-# INLINE attrs #-}
+
+-- | Traverse node attributes with a specific name
+--
+-- >>> let doc = "<root><foo bar=\"baz\" qux=\"quux\"/><foo qux=\"xyzzy\"/></root>" :: TL.Text
+--
+-- >>> doc ^.. xml.plate.attr "qux"
+-- ["quux","xyzzy"]
+--
+-- >>> doc ^.. xml.plate.attr "bar"
+-- ["baz"]
+--
+-- >>> doc & xml.plate.attr "qux" %~ Text.reverse
+-- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root><foo bar=\"baz\" qux=\"xuuq\"/><foo qux=\"yzzyx\"/></root>"
+attr :: Name -> IndexedTraversal' Name Element Text
+attr n = elementAttributes . ix n
+{-# INLINE attr #-}
 
 -- | Select nodes by attributes' values
 --
@@ -264,11 +282,11 @@ named n = _Element . filtered (has (elementName.only n))
 --
 -- >>> doc ^? xml.plate.attributed (folded.to Text.length.only 4).text
 -- Just "7"
-attributed :: AsElement t => Fold (Map Name Text) a -> Traversal' t Element
-attributed p = _Element . filtered (has (elementAttributes . p))
+attributed :: Fold (Map Name Text) a -> Traversal' Element Element
+attributed p = filtered (has (elementAttributes . p))
 {-# INLINE attributed #-}
 
--- | Node text contents
+-- | Traverse node text contents
 --
 -- >>> let doc = "<root>boo</root>" :: TL.Text
 --
@@ -281,35 +299,6 @@ text :: Traversal' Element Text
 text = elementNodes . traverse . _NodeContent
 {-# INLINE text #-}
 
--- | Select node attributes by name
---
--- >>> let doc = "<root><foo bar=\"baz\" qux=\"quux\"/><foo qux=\"xyzzy\"/></root>" :: TL.Text
---
--- >>> doc ^.. xml.plate.attr "qux"
--- ["quux","xyzzy"]
---
--- >>> doc ^.. xml.plate.attr "bar"
--- ["baz"]
---
--- >>> doc & xml.plate.attr "qux" %~ Text.reverse
--- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root><foo bar=\"baz\" qux=\"xuuq\"/><foo qux=\"yzzyx\"/></root>"
-attr :: AsElement t => Name -> IndexedTraversal' Name t Text
-attr n = _Element . elementAttributes . ix n
-{-# INLINE attr #-}
-
--- | Traverse node attributes
---
--- >>> let doc = "<root><foo bar=\"baz\" qux=\"zap\"/><foo quux=\"xyzzy\"/></root>" :: TL.Text
---
--- >>> doc ^.. xml.plate.attrs.indices (has (name.unpacked.prefixed "qu"))
--- ["zap","xyzzy"]
---
--- >>> doc & xml.plate.attrs %~ Text.toUpper
--- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root><foo bar=\"BAZ\" qux=\"ZAP\"/><foo quux=\"XYZZY\"/></root>"
-attrs :: AsElement t => IndexedTraversal' Name t Text
-attrs = _Element . elementAttributes . itraversed
-{-# INLINE attrs #-}
-
 -- | Traverse node comments
 --
 -- >>> let doc = "<root><!-- qux --><foo>bar</foo><!-- quux --></root>" :: TL.Text
@@ -319,8 +308,8 @@ attrs = _Element . elementAttributes . itraversed
 --
 -- >>> doc & xml.partsOf comments .~ [" xyz ", " xyzzy "]
 -- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root><!-- xyz --><foo>bar</foo><!-- xyzzy --></root>"
-comments :: AsElement t => Traversal' t Text
-comments = _Element . elementNodes . traverse . _NodeComment
+comments :: Traversal' Element Text
+comments = elementNodes . traverse . _NodeComment
 {-# INLINE comments #-}
 
 instruction :: Prism' Node Instruction
@@ -351,6 +340,7 @@ data_ :: AsProcessingInstruction t => Traversal' t Text
 data_ = _Instruction . instructionData
 {-# INLINE data_ #-}
 
+-- | \"Having a name\" property overloading
 class AsName t where
   _Name :: Lens' t Name
 
