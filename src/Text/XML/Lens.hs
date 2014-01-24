@@ -414,74 +414,64 @@ prefix = _Name . namePrefix
 {-# INLINE prefix #-}
 
 -- | @xml-conduit@ entity resolving exceptions overloading
-class AsUnresolvedEntityException p f t where
-  _UnresolvedEntityException :: Overloaded' p f t UnresolvedEntityException
+class AsUnresolvedEntityException t where
+  _UnresolvedEntityException :: Prism' t UnresolvedEntityException
 
-instance AsUnresolvedEntityException p f UnresolvedEntityException where
+instance AsUnresolvedEntityException UnresolvedEntityException where
   _UnresolvedEntityException = id
   {-# INLINE _UnresolvedEntityException #-}
 
-instance (Applicative f, Choice p) => AsUnresolvedEntityException p f SomeException where
+instance AsUnresolvedEntityException SomeException where
   _UnresolvedEntityException = exception
   {-# INLINE _UnresolvedEntityException #-}
 
-class AsXMLException p f t where
-  _XMLException :: Overloaded' p f t XMLException
+class AsXMLException t where
+  _XMLException :: Prism' t XMLException
 
-instance AsXMLException p f XMLException where
+instance AsXMLException XMLException where
   _XMLException = id
   {-# INLINE _XMLException #-}
 
-instance (Applicative f, Choice p) => AsXMLException p f SomeException where
+instance AsXMLException SomeException where
   _XMLException = exception
   {-# INLINE _XMLException #-}
 
 -- | @xml-conduit@ XML parsing exceptions overloading
-class AsInvalidEventStream p f t where
-  _InvalidEventStream :: Overloaded' p f t InvalidEventStream
+class AsInvalidEventStream t where
+  _InvalidEventStream :: Prism' t InvalidEventStream
 
-instance AsInvalidEventStream p f InvalidEventStream where
+instance AsInvalidEventStream InvalidEventStream where
   _InvalidEventStream = id
 
-instance (Applicative f, Choice p) => AsInvalidEventStream p f SomeException where
+instance AsInvalidEventStream SomeException where
   _InvalidEventStream = exception
 
 -- | A Prism into 'ContentAfterRoot'
-_ContentAfterRoot
-  :: (Applicative f, Choice p, AsInvalidEventStream p f t)
-  => Overloaded' p f t EventPos
+_ContentAfterRoot :: AsInvalidEventStream t => Prism' t EventPos
 _ContentAfterRoot = _InvalidEventStream
   . prism' ContentAfterRoot (\s -> case s of ContentAfterRoot e -> Just e; _ -> Nothing)
 {-# INLINE _ContentAfterRoot #-}
 
 -- | A Prism into 'MissingRootElement'
-_MissingRootElement
-  :: (Applicative f, Choice p, AsInvalidEventStream p f t)
-  => Overloaded' p f t ()
+_MissingRootElement :: AsInvalidEventStream t => Prism' t ()
 _MissingRootElement = _InvalidEventStream
   . prism' (const MissingRootElement) (\s -> case s of MissingRootElement -> Just (); _ -> Nothing)
 {-# INLINE _MissingRootElement #-}
 
 -- | A Prism into 'InvalidInlineDoctype'
-_InvalidInlineDoctype
-  :: (Applicative f, Choice p, AsInvalidEventStream p f t)
-  => Overloaded' p f t EventPos
+_InvalidInlineDoctype :: AsInvalidEventStream t => Prism' t EventPos
 _InvalidInlineDoctype = _InvalidEventStream
   . prism' InvalidInlineDoctype (\s -> case s of InvalidInlineDoctype e -> Just e; _ -> Nothing)
 {-# INLINE _InvalidInlineDoctype #-}
 
 -- | A Prism into 'MissingEndElement'
-_MissingEndElement
-  :: (Applicative f, Choice p, AsInvalidEventStream p f t)
-  => Overloaded' p f t (Name, Maybe EventPos)
+_MissingEndElement :: AsInvalidEventStream t => Prism' t (Name, Maybe EventPos)
 _MissingEndElement = _InvalidEventStream
   . prism' (uncurry MissingEndElement) (\s -> case s of MissingEndElement e p -> Just (e, p); _ -> Nothing)
 {-# INLINE _MissingEndElement #-}
 
 -- | A Prism into 'UnterminatedInlineDoctype'
-_UnterminatedInlineDoctype
-  :: (Applicative f, Choice p, AsInvalidEventStream p f t)
-  => Overloaded' p f t ()
+_UnterminatedInlineDoctype :: AsInvalidEventStream t => Prism' t ()
 _UnterminatedInlineDoctype = _InvalidEventStream
   . prism' (const UnterminatedInlineDoctype) (\s -> case s of UnterminatedInlineDoctype -> Just (); _ -> Nothing)
 {-# INLINE _UnterminatedInlineDoctype #-}
