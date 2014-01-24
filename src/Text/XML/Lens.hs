@@ -19,10 +19,11 @@
 module Text.XML.Lens
   ( -- * Optics for 'Document'
     Document
-  , AsDocument(..)
+  , AsXmlDocument(..)
   , root
   , prologue
   , epilogue
+  , html
     -- * Optics for 'Doctype'
   , Doctype
   , doctype
@@ -82,6 +83,7 @@ import           Text.XML
   )
 import           Text.XML.Stream.Parse (EventPos)
 import           Text.XML.Unresolved (InvalidEventStream(..))
+import qualified Text.HTML.DOM as Html
 
 import Text.XML.Lens.LowLevel
 
@@ -93,27 +95,38 @@ import Text.XML.Lens.LowLevel
 -- >>> import qualified Text.XML as XML
 
 -- | A 'Prism'' into XML 'Document'
-class AsDocument t where
-  _DocumentWith :: ParseSettings -> RenderSettings -> Prism' t Document
+class AsXmlDocument t where
+  _XmlDocumentWith :: ParseSettings -> RenderSettings -> Prism' t Document
 
-instance AsDocument Document where
-  _DocumentWith _ _ = id
-  {-# INLINE _DocumentWith #-}
+instance AsXmlDocument Document where
+  _XmlDocumentWith _ _ = id
+  {-# INLINE _XmlDocumentWith #-}
 
-instance AsDocument BL.ByteString where
-  _DocumentWith ps rs = prism' (renderLBS rs) (either (const Nothing) Just . parseLBS ps)
-  {-# INLINE _DocumentWith #-}
+instance AsXmlDocument BL.ByteString where
+  _XmlDocumentWith ps rs = prism' (renderLBS rs) (either (const Nothing) Just . parseLBS ps)
+  {-# INLINE _XmlDocumentWith #-}
 
-instance AsDocument TL.Text where
-  _DocumentWith ps rs = prism' (renderText rs) (either (const Nothing) Just . parseText ps)
-  {-# INLINE _DocumentWith #-}
+instance AsXmlDocument TL.Text where
+  _XmlDocumentWith ps rs = prism' (renderText rs) (either (const Nothing) Just . parseText ps)
+  {-# INLINE _XmlDocumentWith #-}
 
-_Document :: AsDocument t => Prism' t Document
-_Document = _DocumentWith def def
-{-# INLINE _Document #-}
+class AsHtmlDocument t where
+  _HtmlDocument :: Fold t Document
 
-prologue :: AsDocument t => Traversal' t Prologue
-prologue = _Document . documentPrologue
+instance AsHtmlDocument Document where
+  _HtmlDocument = id
+  {-# INLINE _HtmlDocument #-}
+
+instance AsHtmlDocument BL.ByteString where
+  _HtmlDocument = to Html.parseLBS
+  {-# INLINE _HtmlDocument #-}
+
+_XmlDocument :: AsXmlDocument t => Prism' t Document
+_XmlDocument = _XmlDocumentWith def def
+{-# INLINE _XmlDocument #-}
+
+prologue :: AsXmlDocument t => Traversal' t Prologue
+prologue = _XmlDocument . documentPrologue
 {-# INLINE prologue #-}
 
 -- | A Traversal into XML document root node
@@ -126,13 +139,28 @@ prologue = _Document . documentPrologue
 --
 -- >>> ("<foo/>" :: TL.Text) & root.name .~ "boo"
 -- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><boo/>"
-root :: AsDocument t => Traversal' t Element
-root = _Document . documentRoot
+root :: AsXmlDocument t => Traversal' t Element
+root = _XmlDocument . documentRoot
 {-# INLINE root #-}
 
-epilogue :: AsDocument t => Traversal' t [Miscellaneous]
-epilogue = _Document . documentEpilogue
+epilogue :: AsXmlDocument t => Traversal' t [Miscellaneous]
+epilogue = _XmlDocument . documentEpilogue
 {-# INLINE epilogue #-}
+
+-- | A Traversal into HTML document root node
+--
+-- Not every parseable HTML document is a valid XML document:
+--
+-- >>> let quasiXml = "<html><br><br></html>" :: BL.ByteString
+--
+-- >>> quasiXml ^.. html.plate.name
+-- ["br","br"]
+--
+-- >>> quasiXml ^? root.plate.name
+-- Nothing
+html :: AsHtmlDocument t => Fold t Element
+html = _HtmlDocument . documentRoot
+{-# INLINE html #-}
 
 -- | A Lens into XML DOCTYPE declaration
 --
