@@ -152,3 +152,13 @@ _NodeInstruction = prism' NodeInstruction (\s -> case s of NodeInstruction e -> 
 _NodeComment :: Prism' Node Text
 _NodeComment = prism' NodeComment (\s -> case s of NodeComment e -> Just e; _ -> Nothing)
 {-# INLINE _NodeComment #-}
+
+-- | A Prism into 'XML.MiscComment'
+_MiscComment :: Prism' Miscellaneous Text
+_MiscComment = prism' MiscComment (\s -> case s of MiscComment e -> Just e; _ -> Nothing)
+{-# INLINE _MiscComment #-}
+
+-- | A Prism into 'XML.MiscInstruction'
+_MiscInstruction :: Prism' Miscellaneous Instruction
+_MiscInstruction = prism' MiscInstruction (\s -> case s of MiscInstruction e -> Just e; _ -> Nothing)
+{-# INLINE _MiscInstruction #-}

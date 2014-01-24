@@ -31,18 +31,17 @@ module Text.XML.Lens
   , doctype
     -- * Optics for 'Element'
   , Element
-  , nodes
   , node
   , named
   , attributed
   , attr
   , attrs
+  , comments
   , AsElement(..)
-    -- * Prisms for 'Node'
+    -- * Optics for 'Node'
   , Node
   , text
   , instruction
-  , AsComment(..)
     -- * Optics for 'Name'
   , Name
   , name
@@ -211,11 +210,7 @@ instance Applicative f => Ixed f Element where
   ix n = elementAttributes . ix n
   {-# INLINE ix #-}
 
--- | Look into the nodes one level deeper
---
--- @
--- plate ≡ nodes
--- @
+-- | Traverse immediate children
 --
 -- >>> let doc = "<root><foo>4</foo><foo>7</foo><bar>11</bar></root>" :: TL.Text
 --
@@ -228,7 +223,7 @@ instance Plated Element where
   plate = elementNodes . traverse . _NodeElement
   {-# INLINE plate #-}
 
--- | Look into the nodes one level deeper with specific names
+-- | Traverse immediate children with a specific name
 --
 -- >>> let doc = "<root><foo>boo</foo><foo>hoo</foo><bar>moo</bar></root>" :: TL.Text
 --
@@ -244,30 +239,17 @@ node :: AsElement t => Name -> Traversal' t Element
 node n = _Element . elementNodes . traverse . named n
 {-# INLINE node #-}
 
--- | Look into the nodes one level deeper
---
--- >>> let doc = "<root><foo>boo</foo><foo>hoo</foo><bar>moo</bar></root>" :: TL.Text
---
--- >>> doc ^. xml.nodes.text
--- "boohoomoo"
---
--- >>> doc ^? xml.node "moot".text
--- Nothing
-nodes :: AsElement t => Traversal' t Element
-nodes = _Element . plate
-{-# INLINE nodes #-}
-
 -- | Select nodes by name
 --
 -- >>> let doc = "<root><foo>4</foo><foo>7</foo><bar>11</bar></root>" :: TL.Text
 --
--- >>> doc ^.. xml.nodes.named "foo".name
+-- >>> doc ^.. xml.plate.named "foo".name
 -- ["foo","foo"]
 --
--- >>> doc ^? xml.nodes.named "bar".name
+-- >>> doc ^? xml.plate.named "bar".name
 -- Just "bar"
 --
--- >>> doc ^? xml.nodes.named "baz".name
+-- >>> doc ^? xml.plate.named "baz".name
 -- Nothing
 named :: AsElement t => Name -> Traversal' t Element
 named n = _Element . filtered (has (elementName.only n))
@@ -328,6 +310,19 @@ attrs :: AsElement t => IndexedTraversal' Name t Text
 attrs = _Element . elementAttributes . itraversed
 {-# INLINE attrs #-}
 
+-- | Traverse node comments
+--
+-- >>> let doc = "<root><!-- qux --><foo>bar</foo><!-- quux --></root>" :: TL.Text
+--
+-- >>> doc ^.. xml.comments
+-- [" qux "," quux "]
+--
+-- >>> doc & xml.partsOf comments .~ [" xyz ", " xyzzy "]
+-- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root><!-- xyz --><foo>bar</foo><!-- xyzzy --></root>"
+comments :: AsElement t => Traversal' t Text
+comments = _Element . elementNodes . traverse . _NodeComment
+{-# INLINE comments #-}
+
 instruction :: Prism' Node Instruction
 instruction = _NodeInstruction
 {-# INLINE instruction #-}
@@ -345,7 +340,7 @@ instance AsProcessingInstruction Node where
   {-# INLINE _Instruction #-}
 
 instance AsProcessingInstruction Miscellaneous where
-  _Instruction = prism' MiscInstruction (\s -> case s of MiscInstruction e -> Just e; _ -> Nothing)
+  _Instruction = _MiscInstruction
   {-# INLINE _Instruction #-}
 
 target :: AsProcessingInstruction t => Traversal' t Text
@@ -355,22 +350,6 @@ target = _Instruction . instructionTarget
 data_ :: AsProcessingInstruction t => Traversal' t Text
 data_ = _Instruction . instructionData
 {-# INLINE data_ #-}
-
--- | A 'Prism'' into XML comment
-class AsComment t where
-  comment :: Prism' t Text
-
-instance AsComment Text where
-  comment = id
-  {-# INLINE comment #-}
-
-instance AsComment Node where
-  comment = _NodeComment
-  {-# INLINE comment #-}
-
-instance AsComment Miscellaneous where
-  comment = prism' MiscComment (\s -> case s of MiscComment e -> Just e; _ -> Nothing)
-  {-# INLINE comment #-}
 
 class AsName t where
   _Name :: Lens' t Name
