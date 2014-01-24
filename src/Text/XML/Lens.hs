@@ -214,23 +214,23 @@ instance Plated Element where
 -- >>> doc ^? xml.node "baz".text
 -- Nothing
 node :: Name -> Traversal' Element Element
-node n = elementNodes . traverse . _NodeElement . named n
+node n = elementNodes . traverse . _NodeElement . named (only n)
 {-# INLINE node #-}
 
 -- | Select nodes by name
 --
--- >>> let doc = "<root><foo>4</foo><foo>7</foo><bar>11</bar></root>" :: TL.Text
+-- >>> let doc = "<root><foo>4</foo><foo>7</foo><bar>11</bar><bar xmlns=\"zap\">28</bar></root>" :: TL.Text
 --
--- >>> doc ^.. xml.plate.named "foo".name
+-- >>> doc ^.. xml.plate.named (only "foo").name
 -- ["foo","foo"]
 --
--- >>> doc ^? xml.plate.named "bar".name
--- Just "bar"
+-- >>> doc ^? xml.plate.named (namespace.traverse.only "zap").text
+-- Just "28"
 --
--- >>> doc ^? xml.plate.named "baz".name
+-- >>> doc ^? xml.plate.named (only "baz").name
 -- Nothing
-named :: Name -> Traversal' Element Element
-named n = filtered (has (elementName.only n))
+named :: Fold Name a -> Traversal' Element Element
+named l = filtered (has (elementName . l))
 {-# INLINE named #-}
 
 -- | Traverse node attributes
