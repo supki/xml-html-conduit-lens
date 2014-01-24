@@ -1,15 +1,4 @@
------------------------------------------------------------------------------
--- |
--- Module      :  Text.XML.Lens
--- Copyright   :  (C) 2013 Fumiaki Kinoshita
--- License     :  BSD-style (see the file LICENSE)
---
--- Maintainer  :  Fumiaki Kinoshita <fumiexcel@gmail.com>
--- Stability   :  experimental
--- Portability :  non-portable
---
--- Lenses and Prisms Template Haskell could handle
-----------------------------------------------------------------------------
+-- | Lenses and Prisms Template Haskell could handle
 module Text.XML.Lens.LowLevel where
 
 import           Control.Lens

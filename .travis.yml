@@ -1,0 +1,5 @@
+language: haskell
+
+script:
+    - cabal install --enable-tests xml-html-conduit-lens.cabal
+    - cabal sdist

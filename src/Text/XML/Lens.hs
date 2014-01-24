@@ -4,18 +4,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE Rank2Types #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
------------------------------------------------------------------------------
--- |
--- Module      :  Text.XML.Lens
--- Copyright   :  (C) 2013 Fumiaki Kinoshita
--- License     :  BSD-style (see the file LICENSE)
---
--- Maintainer  :  Fumiaki Kinoshita <fumiexcel@gmail.com>
--- Stability   :  experimental
--- Portability :  non-portable
---
--- Useful traversals inspired by XPath
-----------------------------------------------------------------------------
+-- | Optics for xml-conduit and html-conduit
 module Text.XML.Lens
   ( -- * Document
     Document
