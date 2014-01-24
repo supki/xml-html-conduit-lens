@@ -25,6 +25,7 @@ module Text.XML.Lens
   , prologue
   , epilogue
   , AsXmlDocument(..)
+  , _XmlDocument
   , AsHtmlDocument(..)
     -- * Doctype
   , Doctype
@@ -38,9 +39,7 @@ module Text.XML.Lens
   , attributed
   , text
   , comments
-    -- * Node
-  , Node
-  , instruction
+  , instructions
     -- * Name
   , Name
   , name
@@ -123,6 +122,7 @@ instance AsHtmlDocument BL.ByteString where
   _HtmlDocument = to Html.parseLBS
   {-# INLINE _HtmlDocument #-}
 
+-- | XML document parsing and rendering with default settings
 _XmlDocument :: AsXmlDocument t => Prism' t Document
 _XmlDocument = _XmlDocumentWith def def
 {-# INLINE _XmlDocument #-}
@@ -312,9 +312,18 @@ comments :: Traversal' Element Text
 comments = elementNodes . traverse . _NodeComment
 {-# INLINE comments #-}
 
-instruction :: Prism' Node Instruction
-instruction = _NodeInstruction
-{-# INLINE instruction #-}
+-- | Traverse node instructions
+--
+-- >>> let doc = "<root><!-- foo --><?foo bar?><qux/><?xyz xyzzy?><quux/></root>" :: TL.Text
+--
+-- >>> doc ^.. xml.instructions.target
+-- ["foo","xyz"]
+--
+-- >>> doc & xml.instructions.data_ %~ Text.toUpper
+-- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root><!-- foo --><?foo BAR?><qux/><?xyz XYZZY?><quux/></root>"
+instructions :: Traversal' Element Instruction
+instructions = elementNodes . traverse . _NodeInstruction
+{-# INLINE instructions #-}
 
 -- | A 'Prism'' into processing 'Instruction'
 class AsProcessingInstruction t where
@@ -325,17 +334,35 @@ instance AsProcessingInstruction Instruction where
   {-# INLINE _Instruction #-}
 
 instance AsProcessingInstruction Node where
-  _Instruction = instruction
+  _Instruction = _NodeInstruction
   {-# INLINE _Instruction #-}
 
 instance AsProcessingInstruction Miscellaneous where
   _Instruction = _MiscInstruction
   {-# INLINE _Instruction #-}
 
+-- | Processing instruction target
+--
+-- >>> let doc = "<root><?foo bar?></root>" :: TL.Text
+--
+-- >>> doc ^? xml.instructions.target
+-- Just "foo"
+--
+-- >>> doc & xml.instructions.target .~ "boo"
+-- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root><?boo bar?></root>"
 target :: AsProcessingInstruction t => Traversal' t Text
 target = _Instruction . instructionTarget
 {-# INLINE target #-}
 
+-- | Processing instruction data
+--
+-- >>> let doc = "<root><?foo bar?></root>" :: TL.Text
+--
+-- >>> doc ^? xml.instructions.data_
+-- Just "bar"
+--
+-- >>> doc & xml.instructions.data_ .~ "hoo"
+-- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root><?foo hoo?></root>"
 data_ :: AsProcessingInstruction t => Traversal' t Text
 data_ = _Instruction . instructionData
 {-# INLINE data_ #-}
