@@ -12,7 +12,7 @@ First, let's prepare the environment
 
 ```haskell
 >>> :set -XOverloadedStrings
->>> import Text.XML.Lens
+>>> import Text.Xml.Lens
 >>> import qualified Data.Text.Lazy.IO as T
 >>> doc <- T.readFile "examples/books.xml"
 >>> T.putStr doc

@@ -4,4 +4,4 @@ import Test.DocTest (doctest)
 
 
 main :: IO ()
-main = doctest ["-isrc", "src/Text/XML/Lens.hs"]
+main = doctest ["-isrc", "src/Text/Xml/Lens.hs"]

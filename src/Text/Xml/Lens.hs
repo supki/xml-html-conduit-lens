@@ -5,7 +5,7 @@
 {-# LANGUAGE Rank2Types #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 -- | Optics for xml-conduit and html-conduit
-module Text.XML.Lens
+module Text.Xml.Lens
   ( -- * Document
     Document
   , xml
@@ -51,7 +51,7 @@ module Text.XML.Lens
   , AsUnresolvedEntityException(..)
   , AsXMLException(..)
   , AsInvalidEventStream(..)
-  , module Text.XML.Lens.LowLevel
+  , module Text.Xml.Lens.LowLevel
   ) where
 
 import           Control.Applicative
@@ -74,7 +74,7 @@ import           Text.XML.Stream.Parse (EventPos)
 import           Text.XML.Unresolved (InvalidEventStream(..))
 import qualified Text.HTML.DOM as Html
 
-import Text.XML.Lens.LowLevel
+import Text.Xml.Lens.LowLevel
 
 -- $setup
 -- >>> :set -XOverloadedStrings

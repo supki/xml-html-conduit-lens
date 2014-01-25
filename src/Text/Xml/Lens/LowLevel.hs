@@ -1,5 +1,5 @@
 -- | Lenses and Prisms Template Haskell could handle
-module Text.XML.Lens.LowLevel where
+module Text.Xml.Lens.LowLevel where
 
 import           Control.Lens
 import           Data.Map (Map)

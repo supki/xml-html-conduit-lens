@@ -10,7 +10,7 @@ import qualified Data.Text.IO as Text              -- text
 import           Network.HTTP.Conduit (simpleHttp) -- http-conduit
 import           System.Exit (exitFailure)         -- base
 import           System.IO (stderr)                -- base
-import           Text.XML.Lens                     -- xml-html-conduit-lens
+import           Text.Xml.Lens                     -- xml-html-conduit-lens
 
 {-# ANN module ("HLint: ignore Avoid lambda" :: String) #-}
 

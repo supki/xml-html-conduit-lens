@@ -1,12 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Text.XML.LensSpec (spec) where
+module Text.Xml.LensSpec (spec) where
 
 import Control.Lens
 import Control.Exception (evaluate)
 import Test.Hspec.Lens
 
 import Text.XML (parseText_, def)
-import Text.XML.Lens
+import Text.Xml.Lens
 
 
 spec :: Spec
