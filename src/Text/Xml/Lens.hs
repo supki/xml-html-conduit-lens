@@ -153,6 +153,7 @@ root :: AsXmlDocument t => Traversal' t Element
 root = xml
 {-# INLINE root #-}
 
+-- | A Lens into XML prolog
 prolog :: AsXmlDocument t => Traversal' t Prologue
 prolog = _XmlDocument . documentPrologue
 {-# INLINE prolog #-}
@@ -329,6 +330,7 @@ text :: Traversal' Element Text
 text = elementNodes . traverse . _NodeContent
 {-# INLINE text #-}
 
+-- | Anything that has comments
 class HasComments t where
   comments :: Traversal' t Text
 
@@ -350,6 +352,7 @@ instance HasComments Miscellaneous where
   comments = _MiscComment
   {-# INLINE comments #-}
 
+-- | Anything that has processing instructions
 class HasInstructions t where
   instructions :: Traversal' t Instruction
 
@@ -397,7 +400,7 @@ data_ :: Traversal' Instruction Text
 data_ = instructionData
 {-# INLINE data_ #-}
 
--- | \"Having a name\" property overloading
+-- | Anything that has a name
 class HasName t where
   _Name :: Lens' t Name
 
@@ -466,6 +469,7 @@ instance AsUnresolvedEntityException SomeException where
   _UnresolvedEntityException = exception
   {-# INLINE _UnresolvedEntityException #-}
 
+-- | @xml-conduit@ general XML exception overloading
 class AsXMLException t where
   _XMLException :: Prism' t XMLException
 
@@ -483,9 +487,11 @@ class AsInvalidEventStream t where
 
 instance AsInvalidEventStream InvalidEventStream where
   _InvalidEventStream = id
+  {-# INLINE _InvalidEventStream #-}
 
 instance AsInvalidEventStream SomeException where
   _InvalidEventStream = exception
+  {-# INLINE _InvalidEventStream #-}
 
 -- | A Prism into 'ContentAfterRoot'
 _ContentAfterRoot :: AsInvalidEventStream t => Prism' t EventPos
