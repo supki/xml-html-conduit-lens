@@ -153,7 +153,7 @@ root :: AsXmlDocument t => Traversal' t Element
 root = xml
 {-# INLINE root #-}
 
--- | A Lens into XML prolog
+-- | A Traversal into XML prolog
 prolog :: AsXmlDocument t => Traversal' t Prologue
 prolog = _XmlDocument . documentPrologue
 {-# INLINE prolog #-}
