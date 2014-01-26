@@ -11,8 +11,8 @@ module Text.Xml.Lens
   , xml
   , html
   , root
-  , prologue
-  , epilogue
+  , prolog
+  , epilog
   , AsXmlDocument(..)
   , _XmlDocument
   , AsHtmlDocument(..)
@@ -27,19 +27,18 @@ module Text.Xml.Lens
   , attr
   , attributed
   , text
-  , comments
-  , instructions
+  , HasComments(..)
+  , HasInstructions(..)
     -- * Name
   , Name
   , name
   , namespace
   , prefix
-  , AsName(..)
+  , HasName(..)
     -- * Instruction
   , Instruction
   , target
   , data_
-  , AsProcessingInstruction(..)
     -- * exceptions
   , UnresolvedEntityException
   , XMLException
@@ -65,7 +64,6 @@ import           Data.Map (Map)
 import           Text.XML
   ( ParseSettings, RenderSettings
   , Document, Doctype, Prologue
-  , Node(..)
   , Element, Instruction, Name, Miscellaneous(..)
   , XMLException(..), UnresolvedEntityException(..)
   , parseLBS, parseText, renderLBS, renderText, def
@@ -84,6 +82,9 @@ import Text.Xml.Lens.LowLevel
 -- >>> import qualified Text.XML as XML
 
 -- | XML document parsing and rendering overloading
+--
+-- This is a general version; for parsing/rendering with the
+-- default options see '_XmlDocument'
 class AsXmlDocument t where
   _XmlDocumentWith :: ParseSettings -> RenderSettings -> Prism' t Document
 
@@ -99,6 +100,11 @@ instance AsXmlDocument TL.Text where
   _XmlDocumentWith ps rs = prism' (renderText rs) (either (const Nothing) Just . parseText ps)
   {-# INLINE _XmlDocumentWith #-}
 
+-- | XML document parsing and rendering with the default settings
+_XmlDocument :: AsXmlDocument t => Prism' t Document
+_XmlDocument = _XmlDocumentWith def def
+{-# INLINE _XmlDocument #-}
+
 -- | HTML document parsing overloading
 class AsHtmlDocument t where
   _HtmlDocument :: Fold t Document
@@ -110,11 +116,6 @@ instance AsHtmlDocument Document where
 instance AsHtmlDocument BL.ByteString where
   _HtmlDocument = to Html.parseLBS
   {-# INLINE _HtmlDocument #-}
-
--- | XML document parsing and rendering with default settings
-_XmlDocument :: AsXmlDocument t => Prism' t Document
-_XmlDocument = _XmlDocumentWith def def
-{-# INLINE _XmlDocument #-}
 
 -- | A Traversal into XML document root node
 --
@@ -150,28 +151,40 @@ root :: AsXmlDocument t => Traversal' t Element
 root = xml
 {-# INLINE root #-}
 
-prologue :: AsXmlDocument t => Traversal' t Prologue
-prologue = _XmlDocument . documentPrologue
-{-# INLINE prologue #-}
+prolog :: AsXmlDocument t => Traversal' t Prologue
+prolog = _XmlDocument . documentPrologue
+{-# INLINE prolog #-}
 
-epilogue :: AsXmlDocument t => Traversal' t [Miscellaneous]
-epilogue = _XmlDocument . documentEpilogue
-{-# INLINE epilogue #-}
+-- | A Traversal into XML epilog
+--
+-- >>> let doc = "<root/><!--qux--><?foo bar?><!--quux-->" :: TL.Text
+--
+-- >>> doc ^.. epilog.folded.comments
+-- ["qux","quux"]
+--
+-- >>> doc ^.. epilog.folded.instructions.target
+-- ["foo"]
+--
+-- >>> doc & epilog .~ []
+-- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root/>"
+epilog :: AsXmlDocument t => Traversal' t [Miscellaneous]
+epilog = _XmlDocument . documentEpilogue
+{-# INLINE epilog #-}
 
 -- | A Lens into XML DOCTYPE declaration
 --
 -- >>> let doc = "<!DOCTYPE foo><root/>" :: TL.Text
 --
--- >>> doc ^? prologue.doctype.folded.doctypeName
+-- >>> doc ^? prolog.doctype.folded.doctypeName
 -- Just "foo"
 --
--- >>> doc & prologue.doctype.traverse.doctypeName .~ "moo"
+-- >>> doc & prolog.doctype.traverse.doctypeName .~ "moo"
 -- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE moo><root/>"
 --
 -- Since @doctype@'s a Lens, it's possible to attach DOCTYPE declaration
 -- to an XML document which didn't have it before:
 --
--- >>> ("<root/>" :: TL.Text) & prologue.doctype ?~ XML.Doctype "moo" Nothing
+-- >>> ("<root/>" :: TL.Text) & prolog.doctype ?~ XML.Doctype "moo" Nothing
 -- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE moo><root/>"
 doctype :: Lens' Prologue (Maybe Doctype)
 doctype = prologueDoctype
@@ -288,47 +301,47 @@ text :: Traversal' Element Text
 text = elementNodes . traverse . _NodeContent
 {-# INLINE text #-}
 
--- | Traverse node comments
---
--- >>> let doc = "<root><!-- qux --><foo>bar</foo><!-- quux --></root>" :: TL.Text
---
--- >>> doc ^.. xml.comments
--- [" qux "," quux "]
---
--- >>> doc & xml.partsOf comments .~ [" xyz ", " xyzzy "]
--- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root><!-- xyz --><foo>bar</foo><!-- xyzzy --></root>"
-comments :: Traversal' Element Text
-comments = elementNodes . traverse . _NodeComment
-{-# INLINE comments #-}
+class HasComments t where
+  comments :: Traversal' t Text
 
--- | Traverse node instructions
---
--- >>> let doc = "<root><!-- foo --><?foo bar?><qux/><?xyz xyzzy?><quux/></root>" :: TL.Text
---
--- >>> doc ^.. xml.instructions.target
--- ["foo","xyz"]
---
--- >>> doc & xml.instructions.data_ %~ Text.toUpper
--- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root><!-- foo --><?foo BAR?><qux/><?xyz XYZZY?><quux/></root>"
-instructions :: Traversal' Element Instruction
-instructions = elementNodes . traverse . _NodeInstruction
-{-# INLINE instructions #-}
+instance HasComments Element where
+  -- | Traverse node comments
+  --
+  -- >>> let doc = "<root><!-- qux --><foo>bar</foo><!-- quux --></root>" :: TL.Text
+  --
+  -- >>> doc ^.. xml.comments
+  -- [" qux "," quux "]
+  --
+  -- >>> doc & xml.partsOf comments .~ [" xyz ", " xyzzy "]
+  -- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root><!-- xyz --><foo>bar</foo><!-- xyzzy --></root>"
+  comments = elementNodes . traverse . _NodeComment
+  {-# INLINE comments #-}
 
--- | A 'Prism'' into processing 'Instruction'
-class AsProcessingInstruction t where
-  _Instruction :: Prism' t Instruction
+instance HasComments Miscellaneous where
+  -- | Traverse node comments
+  comments = _MiscComment
+  {-# INLINE comments #-}
 
-instance AsProcessingInstruction Instruction where
-  _Instruction = id
-  {-# INLINE _Instruction #-}
+class HasInstructions t where
+  instructions :: Traversal' t Instruction
 
-instance AsProcessingInstruction Node where
-  _Instruction = _NodeInstruction
-  {-# INLINE _Instruction #-}
+  -- | Traverse node instructions
+  --
+  -- >>> let doc = "<root><!-- foo --><?foo bar?><qux/><?xyz xyzzy?><quux/></root>" :: TL.Text
+  --
+  -- >>> doc ^.. xml.instructions.target
+  -- ["foo","xyz"]
+  --
+  -- >>> doc & xml.instructions.data_ %~ Text.toUpper
+  -- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root><!-- foo --><?foo BAR?><qux/><?xyz XYZZY?><quux/></root>"
+instance HasInstructions Element where
+  instructions = elementNodes . traverse . _NodeInstruction
+  {-# INLINE instructions #-}
 
-instance AsProcessingInstruction Miscellaneous where
-  _Instruction = _MiscInstruction
-  {-# INLINE _Instruction #-}
+instance HasInstructions Miscellaneous where
+  -- | Traverse node instructions
+  instructions = _MiscInstruction
+  {-# INLINE instructions #-}
 
 -- | Processing instruction target
 --
@@ -339,8 +352,8 @@ instance AsProcessingInstruction Miscellaneous where
 --
 -- >>> doc & xml.instructions.target .~ "boo"
 -- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root><?boo bar?></root>"
-target :: AsProcessingInstruction t => Traversal' t Text
-target = _Instruction . instructionTarget
+target :: Traversal' Instruction Text
+target = instructionTarget
 {-# INLINE target #-}
 
 -- | Processing instruction data
@@ -352,19 +365,19 @@ target = _Instruction . instructionTarget
 --
 -- >>> doc & xml.instructions.data_ .~ "hoo"
 -- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root><?foo hoo?></root>"
-data_ :: AsProcessingInstruction t => Traversal' t Text
-data_ = _Instruction . instructionData
+data_ :: Traversal' Instruction Text
+data_ = instructionData
 {-# INLINE data_ #-}
 
 -- | \"Having a name\" property overloading
-class AsName t where
+class HasName t where
   _Name :: Lens' t Name
 
-instance AsName Name where
+instance HasName Name where
   _Name = id
   {-# INLINE _Name #-}
 
-instance AsName Element where
+instance HasName Element where
   _Name = elementName
   {-# INLINE _Name #-}
 
@@ -378,7 +391,7 @@ instance AsName Element where
 --
 -- >>> ("<root><foo/><bar/><baz></root>" :: TL.Text) & xml.partsOf (plate.name) .~ ["boo", "hoo", "moo"]
 -- "<root><foo/><bar/><baz></root>"
-name :: AsName t => Lens' t Text
+name :: HasName t => Lens' t Text
 name = _Name . nameLocalName
 {-# INLINE name #-}
 
@@ -392,7 +405,7 @@ name = _Name . nameLocalName
 --
 -- >>> ("<root xmlns=\"foo\"/>" :: TL.Text) & xml.namespace .~ Nothing
 -- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root/>"
-namespace :: AsName t => Lens' t (Maybe Text)
+namespace :: HasName t => Lens' t (Maybe Text)
 namespace = _Name . nameNamespace
 {-# INLINE namespace #-}
 
@@ -409,7 +422,7 @@ namespace = _Name . nameNamespace
 --
 -- >>> ("<?xml version=\"1.0\" encoding=\"UTF-8\"?><foo:root xmlns:foo=\"foo\"/>" :: TL.Text) & xml.prefix .~ Nothing
 -- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root xmlns=\"foo\"/>"
-prefix :: AsName t => Lens' t (Maybe Text)
+prefix :: HasName t => Lens' t (Maybe Text)
 prefix = _Name . namePrefix
 {-# INLINE prefix #-}
 
