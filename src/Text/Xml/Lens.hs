@@ -19,6 +19,8 @@ module Text.Xml.Lens
     -- * Doctype
   , Doctype
   , doctype
+  , beforeDoctype
+  , afterDoctype
     -- * Element
   , Element
   , node
@@ -155,22 +157,6 @@ prolog :: AsXmlDocument t => Traversal' t Prologue
 prolog = _XmlDocument . documentPrologue
 {-# INLINE prolog #-}
 
--- | A Traversal into XML epilog
---
--- >>> let doc = "<root/><!--qux--><?foo bar?><!--quux-->" :: TL.Text
---
--- >>> doc ^.. epilog.folded.comments
--- ["qux","quux"]
---
--- >>> doc ^.. epilog.folded.instructions.target
--- ["foo"]
---
--- >>> doc & epilog .~ []
--- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root/>"
-epilog :: AsXmlDocument t => Traversal' t [Miscellaneous]
-epilog = _XmlDocument . documentEpilogue
-{-# INLINE epilog #-}
-
 -- | A Lens into XML DOCTYPE declaration
 --
 -- >>> let doc = "<!DOCTYPE foo><root/>" :: TL.Text
@@ -189,6 +175,48 @@ epilog = _XmlDocument . documentEpilogue
 doctype :: Lens' Prologue (Maybe Doctype)
 doctype = prologueDoctype
 {-# INLINE doctype #-}
+
+-- | A Lens into nodes before XML DOCTYPE declaration
+--
+-- >>> let doc = "<!--foo--><!DOCTYPE bar><!--baz--><root/>" :: TL.Text
+--
+-- >>> doc ^? prolog.beforeDoctype.folded.comments
+-- Just "foo"
+--
+-- >>> doc & prolog.beforeDoctype.traverse.comments %~ Text.toUpper
+-- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!--FOO--><!DOCTYPE bar><!--baz--><root/>"
+beforeDoctype :: Lens' Prologue [Miscellaneous]
+beforeDoctype = prologueBefore
+{-# INLINE beforeDoctype #-}
+
+-- | A Lens into nodes after XML DOCTYPE declaration
+--
+-- >>> let doc = "<!--foo--><!DOCTYPE bar><!--baz--><root/>" :: TL.Text
+--
+-- >>> doc ^? prolog.afterDoctype.folded.comments
+-- Just "baz"
+--
+-- >>> doc & prolog.afterDoctype.traverse.comments %~ Text.toUpper
+-- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!--foo--><!DOCTYPE bar><!--BAZ--><root/>"
+afterDoctype :: Lens' Prologue [Miscellaneous]
+afterDoctype = prologueAfter
+{-# INLINE afterDoctype #-}
+
+-- | A Traversal into XML epilog
+--
+-- >>> let doc = "<root/><!--qux--><?foo bar?><!--quux-->" :: TL.Text
+--
+-- >>> doc ^.. epilog.folded.comments
+-- ["qux","quux"]
+--
+-- >>> doc ^.. epilog.folded.instructions.target
+-- ["foo"]
+--
+-- >>> doc & epilog .~ []
+-- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root/>"
+epilog :: AsXmlDocument t => Traversal' t [Miscellaneous]
+epilog = _XmlDocument . documentEpilogue
+{-# INLINE epilog #-}
 
 type instance Index Element = Name
 type instance IxValue Element = Text
