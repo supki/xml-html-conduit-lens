@@ -2,7 +2,7 @@ name:                xml-html-conduit-lens
 version:             0.1.0.0
 synopsis:            Optics for xml-conduit and html-conduit
 description:         Optics for xml-conduit and html-conduit
-homepage:            https://github.com/supki/xml-html-coduit-lens#readme
+homepage:            https://github.com/supki/xml-html-conduit-lens#readme
 license:             BSD3
 license-file:        LICENSE
 author:              Fumiaki Kinoshita, Matvey Aksenov
