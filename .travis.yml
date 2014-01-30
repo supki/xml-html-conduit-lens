@@ -1,6 +1,6 @@
 language: haskell
 
-before_script:
+before_install:
     - cabal install cpphs
 
 script:
