@@ -16,14 +16,14 @@ import Text.Xml.Lens    -- xml-html-conduit-lens
 -- >>> doc ^.. listTitles
 -- ["Learn You a Haskell for Great Good!","Programming in Haskell","Real World Haskell"]
 listTitles :: AsXmlDocument t => Traversal' t Text
-listTitles = xml.plate.attributed (ix "category".only "Textbooks").node "title".text
+listTitles = xml...attributed (ix "category".only "Textbooks").node "title".text
 
 -- | List authors of books longer then 500 pages:
 --
 -- >>> doc ^.. listAuthors
 -- ["Bryan O'Sullivan, Don Stewart, and John Goerzen","Benjamin C. Pierce"]
 listAuthors :: AsXmlDocument t => Traversal' t Text
-listAuthors = xml.plate.filtered (has (node "pages".text.filtered (> "500"))).node "author".text
+listAuthors = xml...filtered (has (node "pages".text.filtered (> "500"))).node "author".text
 
 -- | List all tags from top to bottom:
 --
@@ -44,7 +44,7 @@ countBooks = lengthOf (xml.plate)
 -- >>> doc ^? titleOfFirstJokeBook
 -- Just "Functional Ikamusume"
 titleOfFirstJokeBook :: AsXmlDocument t => Traversal' t Text
-titleOfFirstJokeBook = xml.plate.attributed (ix "category".only "Joke").node "title".text
+titleOfFirstJokeBook = xml...attributed (ix "category".only "Joke").node "title".text
 
 -- | Append the string " pages" to each `<pages>` tag contents:
 --
@@ -87,4 +87,4 @@ titleOfFirstJokeBook = xml.plate.attributed (ix "category".only "Joke").node "ti
 -- </book>
 -- </books>
 appendPages :: AsXmlDocument t => t -> t
-appendPages = xml.plate.node "pages".text <>~ " pages"
+appendPages = xml...node "pages".text <>~ " pages"

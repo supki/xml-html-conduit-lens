@@ -138,10 +138,10 @@ xml = _XmlDocument . documentRoot
 --
 -- >>> let quasiXml = "<html><br><br></html>" :: BL.ByteString
 --
--- >>> quasiXml ^.. html.plate.name
+-- >>> quasiXml ^.. html...name
 -- ["br","br"]
 --
--- >>> quasiXml ^? xml.plate.name
+-- >>> quasiXml ^? xml...name
 -- Nothing
 html :: AsHtmlDocument t => Fold t Element
 html = _HtmlDocument . documentRoot
@@ -233,10 +233,10 @@ instance Ixed Element where
 --
 -- >>> let doc = "<root><foo>4</foo><foo>7</foo><bar>11</bar></root>" :: TL.Text
 --
--- >>> doc ^.. xml.plate.name
+-- >>> doc ^.. xml...name
 -- ["foo","foo","bar"]
 --
--- >>> doc & partsOf (root.plate.name) .~ ["boo", "hoo", "moo"]
+-- >>> doc & partsOf (root...name) .~ ["boo", "hoo", "moo"]
 -- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root><boo>4</boo><hoo>7</hoo><moo>11</moo></root>"
 instance Plated Element where
   plate = elementNodes . traverse . _NodeElement
@@ -262,13 +262,13 @@ node n = elementNodes . traverse . _NodeElement . named (only n)
 --
 -- >>> let doc = "<root><foo>4</foo><foo>7</foo><bar>11</bar><bar xmlns=\"zap\">28</bar></root>" :: TL.Text
 --
--- >>> doc ^.. xml.plate.named (only "foo").name
+-- >>> doc ^.. xml...named (only "foo").name
 -- ["foo","foo"]
 --
--- >>> doc ^? xml.plate.named (namespace.traverse.only "zap").text
+-- >>> doc ^? xml...named (namespace.traverse.only "zap").text
 -- Just "28"
 --
--- >>> doc ^? xml.plate.named (only "baz").name
+-- >>> doc ^? xml...named (only "baz").name
 -- Nothing
 named :: Fold Name a -> Traversal' Element Element
 named l = filtered (has (elementName . l))
@@ -278,10 +278,10 @@ named l = filtered (has (elementName . l))
 --
 -- >>> let doc = "<root><foo bar=\"baz\" qux=\"zap\"/><foo quux=\"xyzzy\"/></root>" :: TL.Text
 --
--- >>> doc ^.. xml.plate.attrs.indices (has (name.unpacked.prefixed "qu"))
+-- >>> doc ^.. xml...attrs.indices (has (name.unpacked.prefixed "qu"))
 -- ["zap","xyzzy"]
 --
--- >>> doc & xml.plate.attrs %~ Text.toUpper
+-- >>> doc & xml...attrs %~ Text.toUpper
 -- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root><foo bar=\"BAZ\" qux=\"ZAP\"/><foo quux=\"XYZZY\"/></root>"
 attrs :: IndexedTraversal' Name Element Text
 attrs = elementAttributes . itraversed
@@ -291,13 +291,13 @@ attrs = elementAttributes . itraversed
 --
 -- >>> let doc = "<root><foo bar=\"baz\" qux=\"quux\"/><foo qux=\"xyzzy\"/></root>" :: TL.Text
 --
--- >>> doc ^.. xml.plate.attr "qux"
+-- >>> doc ^.. xml...attr "qux"
 -- ["quux","xyzzy"]
 --
--- >>> doc ^.. xml.plate.attr "bar"
+-- >>> doc ^.. xml...attr "bar"
 -- ["baz"]
 --
--- >>> doc & xml.plate.attr "qux" %~ Text.reverse
+-- >>> doc & xml...attr "qux" %~ Text.reverse
 -- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root><foo bar=\"baz\" qux=\"xuuq\"/><foo qux=\"yzzyx\"/></root>"
 attr :: Name -> Traversal' Element Text
 attr n = elementAttributes . ix n
@@ -307,10 +307,10 @@ attr n = elementAttributes . ix n
 --
 -- >>> let doc = "<root><foo bar=\"baz\">4</foo><foo bar=\"quux\">7</foo><bar bar=\"baz\">11</bar></root>" :: TL.Text
 --
--- >>> doc ^.. xml.plate.attributed (ix "bar".only "baz").text
+-- >>> doc ^.. xml...attributed (ix "bar".only "baz").text
 -- ["4","11"]
 --
--- >>> doc ^? xml.plate.attributed (folded.to Text.length.only 4).text
+-- >>> doc ^? xml...attributed (folded.to Text.length.only 4).text
 -- Just "7"
 attributed :: Fold (Map Name Text) a -> Traversal' Element Element
 attributed p = filtered (has (elementAttributes . p))
@@ -416,7 +416,7 @@ instance HasName Element where
 -- >>> ("<root/>" :: TL.Text) ^. xml.name
 -- "root"
 --
--- >>> ("<root><foo/><bar/><baz/></root>" :: TL.Text) ^.. xml.plate.name
+-- >>> ("<root><foo/><bar/><baz/></root>" :: TL.Text) ^.. xml...name
 -- ["foo","bar","baz"]
 --
 -- >>> ("<root><foo/><bar/><baz></root>" :: TL.Text) & xml.partsOf (plate.name) .~ ["boo", "hoo", "moo"]
