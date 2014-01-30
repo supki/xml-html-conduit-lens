@@ -1,5 +1,8 @@
 language: haskell
 
+before_script:
+    - cabal install cpphs
+
 script:
     - cabal install --enable-tests xml-html-conduit-lens.cabal
     - cabal sdist

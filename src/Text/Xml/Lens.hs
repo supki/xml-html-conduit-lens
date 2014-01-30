@@ -55,7 +55,6 @@ module Text.Xml.Lens
   , module Text.Xml.Lens.LowLevel
   ) where
 
-import           Control.Applicative
 import           Control.Exception (SomeException)
 import           Control.Exception.Lens (exception)
 import           Control.Lens
@@ -226,7 +225,7 @@ instance At Element where
   at n = elementAttributes . at n
   {-# INLINE at #-}
 
-instance Applicative f => Ixed f Element where
+instance Ixed Element where
   ix n = elementAttributes . ix n
   {-# INLINE ix #-}
 
@@ -300,7 +299,7 @@ attrs = elementAttributes . itraversed
 --
 -- >>> doc & xml.plate.attr "qux" %~ Text.reverse
 -- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root><foo bar=\"baz\" qux=\"xuuq\"/><foo qux=\"yzzyx\"/></root>"
-attr :: Name -> IndexedTraversal' Name Element Text
+attr :: Name -> Traversal' Element Text
 attr n = elementAttributes . ix n
 {-# INLINE attr #-}
 
