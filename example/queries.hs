@@ -1,9 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Queries where
 
-import Control.Lens     -- lens
-import Data.Text (Text) -- text
-import Text.Xml.Lens    -- xml-html-conduit-lens
+import Control.Applicative -- base
+import Control.Lens        -- lens
+import Data.Text (Text)    -- text
+import Text.Xml.Lens       -- xml-html-conduit-lens
 
 -- $setup
 -- >>> :set -XOverloadedStrings
@@ -11,19 +12,27 @@ import Text.Xml.Lens    -- xml-html-conduit-lens
 -- >>> import qualified Data.Text.Lazy.IO as Text
 -- >>> doc <- Text.readFile "example/books.xml"
 
--- | List titles of books in "Textbooks" category:
+-- | List titles of the books in "Textbooks" category:
 --
 -- >>> doc ^.. listTitles
 -- ["Learn You a Haskell for Great Good!","Programming in Haskell","Real World Haskell"]
 listTitles :: AsXmlDocument t => Traversal' t Text
 listTitles = xml...attributed (ix "category".only "Textbooks").node "title".text
 
--- | List authors of books longer then 500 pages:
+-- | List authors of the books longer then 500 pages:
 --
 -- >>> doc ^.. listAuthors
 -- ["Bryan O'Sullivan, Don Stewart, and John Goerzen","Benjamin C. Pierce"]
 listAuthors :: AsXmlDocument t => Traversal' t Text
 listAuthors = xml...filtered (has (node "pages".text.filtered (> "500"))).node "author".text
+
+-- | List titles and authors of the books in "Textbooks" category
+--
+-- >>> doc ^.. listTitlesAndAuthors
+-- [("Learn You a Haskell for Great Good!","Miran Lipovaca"),("Programming in Haskell","Graham Hutton"),("Real World Haskell","Bryan O'Sullivan, Don Stewart, and John Goerzen")]
+listTitlesAndAuthors :: AsXmlDocument t => Fold t (Text, Text)
+listTitlesAndAuthors = xml...attributed (ix "category".only "Textbooks")
+  .runFold (liftA2 (,) (Fold (node "title".text)) (Fold (node "author".text)))
 
 -- | List all tags from top to bottom:
 --
