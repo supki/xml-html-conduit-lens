@@ -13,7 +13,6 @@ module Text.Xml.Lens
   , root
   , _RootWith
   , _Root
-  , def
   , Prologue
   , prolog
   , epilog
@@ -91,18 +90,19 @@ import Text.Xml.Lens.LowLevel
 -- This is a general version; for parsing/rendering with the
 -- default options see '_XmlDocument'
 class AsXmlDocument t where
-  _XmlDocumentWith :: ParseSettings -> RenderSettings -> Prism' t Document
+  _XmlDocumentWith
+    :: (ParseSettings -> ParseSettings) -> (RenderSettings -> RenderSettings) -> Prism' t Document
 
 instance AsXmlDocument Document where
   _XmlDocumentWith _ _ = id
   {-# INLINE _XmlDocumentWith #-}
 
 instance AsXmlDocument BL.ByteString where
-  _XmlDocumentWith ps rs = prism' (renderLBS rs) (either (const Nothing) Just . parseLBS ps)
+  _XmlDocumentWith p r = prism' (renderLBS (r def)) (either (const Nothing) Just . parseLBS (p def))
   {-# INLINE _XmlDocumentWith #-}
 
 instance AsXmlDocument TL.Text where
-  _XmlDocumentWith ps rs = prism' (renderText rs) (either (const Nothing) Just . parseText ps)
+  _XmlDocumentWith p r = prism' (renderText (r def)) (either (const Nothing) Just . parseText (p def))
   {-# INLINE _XmlDocumentWith #-}
 
 -- | XML document parsing and rendering with the default settings
@@ -165,13 +165,13 @@ prolog = _XmlDocument . documentPrologue
 --
 -- Convenience function mostly useful because @xml-conduit@ does not
 -- provide handy method to convert 'Element' into text. Assumes empty XML prolog
-_RootWith :: AsXmlDocument t => RenderSettings -> Fold Element t
-_RootWith r = to (\e -> Document (Prologue [] Nothing []) e []) . re (_XmlDocumentWith def r)
+_RootWith :: AsXmlDocument t => (RenderSettings -> RenderSettings) -> Fold Element t
+_RootWith r = to (\e -> Document (Prologue [] Nothing []) e []) . re (_XmlDocumentWith id r)
 {-# INLINE _RootWith #-}
 
 -- | Fold 'Element' into the XML document with the default rendering settings
 _Root :: AsXmlDocument t => Fold Element t
-_Root = _RootWith def
+_Root = _RootWith id
 {-# INLINE _Root #-}
 
 -- | A Lens into XML DOCTYPE declaration
