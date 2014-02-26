@@ -11,9 +11,11 @@ module Text.Xml.Lens
   , xml
   , html
   , root
+  , _RootWith
+  , _Root
+  , def
   , Prologue
   , prolog
-  , emptyProlog
   , epilog
   , AsXmlDocument(..)
   , _XmlDocument
@@ -66,7 +68,7 @@ import           Data.Text (Text)
 import           Data.Map (Map)
 import           Text.XML
   ( ParseSettings, RenderSettings
-  , Document, Doctype, Prologue(Prologue)
+  , Document(Document), Doctype, Prologue(Prologue)
   , Element, Instruction, Name, Miscellaneous(..)
   , XMLException(..), UnresolvedEntityException(..)
   , parseLBS, parseText, renderLBS, renderText, def
@@ -159,10 +161,18 @@ prolog :: AsXmlDocument t => Traversal' t Prologue
 prolog = _XmlDocument . documentPrologue
 {-# INLINE prolog #-}
 
---  | An empty XML prolog
-emptyProlog :: Prologue
-emptyProlog = Prologue [] Nothing []
-{-# INLINE emptyProlog #-}
+-- | Fold 'Element' into the XML document
+--
+-- Convenience function mostly useful because @xml-conduit@ does not
+-- provide handy method to convert 'Element' into text. Assumes empty XML prolog
+_RootWith :: AsXmlDocument t => RenderSettings -> Fold Element t
+_RootWith r = to (\e -> Document (Prologue [] Nothing []) e []) . re (_XmlDocumentWith def r)
+{-# INLINE _RootWith #-}
+
+-- | Fold 'Element' into the XML document with the default rendering settings
+_Root :: AsXmlDocument t => Fold Element t
+_Root = _RootWith def
+{-# INLINE _Root #-}
 
 -- | A Lens into XML DOCTYPE declaration
 --
