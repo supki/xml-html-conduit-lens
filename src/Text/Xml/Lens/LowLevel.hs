@@ -6,7 +6,7 @@ import           Data.Map (Map)
 import           Data.Text (Text)
 import           Text.XML
   ( ParseSettings, RenderSettings
-  , Document, Doctype, Prologue, ExternalID
+  , Document(..), Doctype, Prologue, ExternalID
   , Node(..), Element(..), Instruction, Name, Miscellaneous(..)
   )
 import           Text.XML.Stream.Parse (DecodeEntities)
@@ -121,6 +121,11 @@ instructionTarget f i = f (XML.instructionTarget i) <&> \p -> i { XML.instructio
 instructionData :: Lens' Instruction Text
 instructionData f i = f (XML.instructionData i) <&> \p -> i { XML.instructionData = p }
 {-# INLINE instructionData #-}
+
+-- | An Iso into 'XML.Document'
+_Document :: Iso' Document (Prologue, Element, [Miscellaneous])
+_Document = iso (\(Document p r e) -> (p, r, e)) (\(p, r, e) -> Document p r e)
+{-# INLINE _Document #-}
 
 -- | An Iso into 'XML.Element'
 _Element :: Iso' Element (Name, Map Name Text, [Node])

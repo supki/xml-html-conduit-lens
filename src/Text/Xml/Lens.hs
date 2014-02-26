@@ -11,7 +11,9 @@ module Text.Xml.Lens
   , xml
   , html
   , root
+  , Prologue
   , prolog
+  , emptyProlog
   , epilog
   , AsXmlDocument(..)
   , _XmlDocument
@@ -64,7 +66,7 @@ import           Data.Text (Text)
 import           Data.Map (Map)
 import           Text.XML
   ( ParseSettings, RenderSettings
-  , Document, Doctype, Prologue
+  , Document, Doctype, Prologue(Prologue)
   , Element, Instruction, Name, Miscellaneous(..)
   , XMLException(..), UnresolvedEntityException(..)
   , parseLBS, parseText, renderLBS, renderText, def
@@ -156,6 +158,11 @@ root = xml
 prolog :: AsXmlDocument t => Traversal' t Prologue
 prolog = _XmlDocument . documentPrologue
 {-# INLINE prolog #-}
+
+--  | An empty XML prolog
+emptyProlog :: Prologue
+emptyProlog = Prologue [] Nothing []
+{-# INLINE emptyProlog #-}
 
 -- | A Lens into XML DOCTYPE declaration
 --
