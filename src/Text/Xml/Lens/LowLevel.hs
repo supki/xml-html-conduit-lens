@@ -7,7 +7,7 @@ import           Data.Text (Text)
 import           Text.XML
   ( ParseSettings, RenderSettings
   , Document, Doctype, Prologue, ExternalID
-  , Node(..), Element, Instruction, Name, Miscellaneous(..)
+  , Node(..), Element(..), Instruction, Name, Miscellaneous(..)
   )
 import           Text.XML.Stream.Parse (DecodeEntities)
 import qualified Text.XML as XML
@@ -121,6 +121,11 @@ instructionTarget f i = f (XML.instructionTarget i) <&> \p -> i { XML.instructio
 instructionData :: Lens' Instruction Text
 instructionData f i = f (XML.instructionData i) <&> \p -> i { XML.instructionData = p }
 {-# INLINE instructionData #-}
+
+-- | An Iso into 'XML.Element'
+_Element :: Iso' Element (Name, Map Name Text, [Node])
+_Element = iso (\(Element n as ns) -> (n, as, ns)) (\(n, as, ns) -> Element n as ns)
+{-# INLINE _Element #-}
 
 -- | A Prism into 'XML.NodeElement'
 _NodeElement :: Prism' Node Element
