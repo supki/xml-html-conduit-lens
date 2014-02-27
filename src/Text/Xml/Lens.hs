@@ -11,8 +11,8 @@ module Text.Xml.Lens
   , xml
   , html
   , root
-  , _RootWith
-  , _Root
+  , renderWith
+  , render
   , Prologue
   , prolog
   , epilog
@@ -166,7 +166,7 @@ prolog = _XmlDocument . documentPrologue
 -- Convenience function mostly useful because @xml-conduit@ does not
 -- provide handy method to convert 'Element' into text. Assumes empty XML prolog
 --
--- See also '_Root'
+-- See also 'render'
 --
 -- >>> :{
 --   let
@@ -178,10 +178,10 @@ prolog = _XmlDocument . documentPrologue
 --         & elementNodes %~ (subtag "child0" <|)
 -- :}
 --
--- >>> Data.Text.Lazy.IO.putStr $ doc ^. _Root
+-- >>> Data.Text.Lazy.IO.putStr $ doc ^. render
 -- <?xml version="1.0" encoding="UTF-8"?><root><child0/><child1/><child2/><child3/></root>
 --
--- >>> Data.Text.Lazy.IO.putStr $ doc ^. _RootWith (rsPretty .~ True)
+-- >>> Data.Text.Lazy.IO.putStr $ doc ^. renderWith (rsPretty .~ True)
 -- <?xml version="1.0" encoding="UTF-8"?>
 -- <root>
 --     <child0/>
@@ -189,14 +189,14 @@ prolog = _XmlDocument . documentPrologue
 --     <child2/>
 --     <child3/>
 -- </root>
-_RootWith :: AsXmlDocument t => (RenderSettings -> RenderSettings) -> Fold Element t
-_RootWith r = to (\e -> Document (Prologue [] Nothing []) e []) . re (_XmlDocumentWith id r)
-{-# INLINE _RootWith #-}
+renderWith :: AsXmlDocument t => (RenderSettings -> RenderSettings) -> Fold Element t
+renderWith r = to (\e -> Document (Prologue [] Nothing []) e []) . re (_XmlDocumentWith id r)
+{-# INLINE renderWith #-}
 
 -- | Fold 'Element' into the XML document with the default rendering settings
-_Root :: AsXmlDocument t => Fold Element t
-_Root = _RootWith id
-{-# INLINE _Root #-}
+render :: AsXmlDocument t => Fold Element t
+render = renderWith id
+{-# INLINE render #-}
 
 -- | A Lens into XML DOCTYPE declaration
 --
