@@ -12,7 +12,7 @@ import           Text.XML
 import           Text.XML.Stream.Parse (DecodeEntities)
 import qualified Text.XML as XML
 
--- | A Lens into 'XML.rsPretty'
+-- | A Lens into 'XML.psDecodeEntities'
 psDecodeEntities :: Lens' ParseSettings DecodeEntities
 psDecodeEntities f ps = f (XML.psDecodeEntities ps) <&> \p -> ps { XML.psDecodeEntities = p }
 {-# INLINE psDecodeEntities #-}
