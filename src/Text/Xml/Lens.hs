@@ -165,6 +165,30 @@ prolog = _XmlDocument . documentPrologue
 --
 -- Convenience function mostly useful because @xml-conduit@ does not
 -- provide handy method to convert 'Element' into text. Assumes empty XML prolog
+--
+-- See also '_Root'
+--
+-- >>> :{
+--   let
+--     bare l   = (l, Data.Map.empty, [])
+--     tag l    = _Element # bare l
+--     subtag l = _NodeElement._Element # bare l
+--     doc      = tag "root"
+--         & elementNodes <>~ [subtag "child1", subtag "child2", subtag "child3"]
+--         & elementNodes %~ (subtag "child0" <|)
+-- :}
+--
+-- >>> Data.Text.Lazy.IO.putStr $ doc ^. _Root
+-- <?xml version="1.0" encoding="UTF-8"?><root><child0/><child1/><child2/><child3/></root>
+--
+-- >>> Data.Text.Lazy.IO.putStr $ doc ^. _RootWith (rsPretty .~ True)
+-- <?xml version="1.0" encoding="UTF-8"?>
+-- <root>
+--     <child0/>
+--     <child1/>
+--     <child2/>
+--     <child3/>
+-- </root>
 _RootWith :: AsXmlDocument t => (RenderSettings -> RenderSettings) -> Fold Element t
 _RootWith r = to (\e -> Document (Prologue [] Nothing []) e []) . re (_XmlDocumentWith id r)
 {-# INLINE _RootWith #-}

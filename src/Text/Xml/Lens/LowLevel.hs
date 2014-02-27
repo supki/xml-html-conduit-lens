@@ -1,4 +1,4 @@
--- | Lenses and Prisms Template Haskell could handle
+-- | Optics Template Haskell could generate, but didn't
 module Text.Xml.Lens.LowLevel where
 
 import           Control.Lens
