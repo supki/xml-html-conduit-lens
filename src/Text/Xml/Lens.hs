@@ -442,15 +442,15 @@ data_ = instructionData
 
 -- | Anything that has a name
 class HasName t where
-  _Name :: Lens' t Name
+  fullName :: Lens' t Name
 
 instance HasName Name where
-  _Name = id
-  {-# INLINE _Name #-}
+  fullName = id
+  {-# INLINE fullName #-}
 
 instance HasName Element where
-  _Name = elementName
-  {-# INLINE _Name #-}
+  fullName = elementName
+  {-# INLINE fullName #-}
 
 -- | A Lens into node name
 --
@@ -463,7 +463,7 @@ instance HasName Element where
 -- >>> ("<root><foo/><bar/><baz></root>" :: TL.Text) & xml.partsOf (plate.name) .~ ["boo", "hoo", "moo"]
 -- "<root><foo/><bar/><baz></root>"
 name :: HasName t => Lens' t Text
-name = _Name . nameLocalName
+name = fullName . nameLocalName
 {-# INLINE name #-}
 
 -- | A Lens into node namespace
@@ -477,7 +477,7 @@ name = _Name . nameLocalName
 -- >>> ("<root xmlns=\"foo\"/>" :: TL.Text) & xml.namespace .~ Nothing
 -- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root/>"
 namespace :: HasName t => Lens' t (Maybe Text)
-namespace = _Name . nameNamespace
+namespace = fullName . nameNamespace
 {-# INLINE namespace #-}
 
 -- | A Lens into node namespace
@@ -494,7 +494,7 @@ namespace = _Name . nameNamespace
 -- >>> ("<?xml version=\"1.0\" encoding=\"UTF-8\"?><foo:root xmlns:foo=\"foo\"/>" :: TL.Text) & xml.prefix .~ Nothing
 -- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root xmlns=\"foo\"/>"
 prefix :: HasName t => Lens' t (Maybe Text)
-prefix = _Name . namePrefix
+prefix = fullName . namePrefix
 {-# INLINE prefix #-}
 
 -- | @xml-conduit@ entity resolving exceptions overloading

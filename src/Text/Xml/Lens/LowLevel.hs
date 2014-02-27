@@ -6,8 +6,8 @@ import           Data.Map (Map)
 import           Data.Text (Text)
 import           Text.XML
   ( ParseSettings, RenderSettings
-  , Document(..), Doctype, Prologue, ExternalID
-  , Node(..), Element(..), Instruction, Name, Miscellaneous(..)
+  , Document(..), Doctype(..), Prologue(..), ExternalID
+  , Node(..), Element(..), Instruction(..), Name(..), Miscellaneous(..)
   )
 import           Text.XML.Stream.Parse (DecodeEntities)
 import qualified Text.XML as XML
@@ -124,13 +124,33 @@ instructionData f i = f (XML.instructionData i) <&> \p -> i { XML.instructionDat
 
 -- | An Iso into 'XML.Document'
 _Document :: Iso' Document (Prologue, Element, [Miscellaneous])
-_Document = iso (\(Document p r e) -> (p, r, e)) (\(p, r, e) -> Document p r e)
+_Document = iso (\(Document p r e) -> (p, r, e)) (uncurry3 Document)
 {-# INLINE _Document #-}
+
+-- | An Iso into 'XML.Prologue'
+_Prologue :: Iso' Prologue ([Miscellaneous], Maybe Doctype, [Miscellaneous])
+_Prologue = iso (\(Prologue xs d ys) -> (xs, d, ys)) (uncurry3 Prologue)
+{-# INLINE _Prologue #-}
+
+-- | An Iso into 'XML.Instruction'
+_Instruction :: Iso' Instruction (Text, Text)
+_Instruction = iso (\(Instruction t d) -> (t, d)) (uncurry Instruction)
+{-# INLINE _Instruction #-}
 
 -- | An Iso into 'XML.Element'
 _Element :: Iso' Element (Name, Map Name Text, [Node])
-_Element = iso (\(Element n as ns) -> (n, as, ns)) (\(n, as, ns) -> Element n as ns)
+_Element = iso (\(Element n as ns) -> (n, as, ns)) (uncurry3 Element)
 {-# INLINE _Element #-}
+
+-- | An Iso into 'XML.Name'
+_Name :: Iso' Name (Text, Maybe Text, Maybe Text)
+_Name = iso (\(Name ln ns p) -> (ln, ns, p)) (uncurry3 Name)
+{-# INLINE _Name #-}
+
+-- | An Iso into 'XML.Doctype'
+_Doctype :: Iso' Doctype (Text, Maybe ExternalID)
+_Doctype = iso (\(Doctype n i) -> (n, i)) (uncurry Doctype)
+{-# INLINE _Doctype #-}
 
 -- | A Prism into 'XML.NodeElement'
 _NodeElement :: Prism' Node Element
@@ -161,3 +181,8 @@ _MiscComment = prism' MiscComment (\s -> case s of MiscComment e -> Just e; _ ->
 _MiscInstruction :: Prism' Miscellaneous Instruction
 _MiscInstruction = prism' MiscInstruction (\s -> case s of MiscInstruction e -> Just e; _ -> Nothing)
 {-# INLINE _MiscInstruction #-}
+
+-- A version of 'uncurry' for functions of \"3 argumentso\"
+uncurry3 :: (a -> b -> c -> d) -> (a, b, c) -> d
+uncurry3 f ~(a, b, c) = f a b c
+{-# INLINE uncurry3 #-}
