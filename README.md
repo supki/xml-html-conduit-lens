@@ -3,6 +3,7 @@ xml-html-conduit-lens
 [![Hackage](https://budueba.com/hackage/xml-html-conduit-lens)](https://hackage.haskell.org/package/xml-html-conduit-lens)
 [![Build Status](https://secure.travis-ci.org/supki/xml-html-conduit-lens.png?branch=master)](https://travis-ci.org/supki/xml-html-conduit-lens)
 
+
 Optics for [xml-conduit][0] and [html-conduit][1]
 
 ## Tutorial
@@ -68,6 +69,8 @@ going to be much more pretty:
 </root>
 ```
 
+xml-conduit adds the first line automatically, you don't need to worry about it
+
 ### Manipulating elements
 
 ### Element attributes
@@ -77,6 +80,50 @@ going to be much more pretty:
 ### Using XPath
 
 ### Parsing and rendering
+
+xml-conduit parses values of `Data.ByteString.Lazy.ByteString` and `Data.Text.Lazy.Text`
+types and so does xml-html-conduit-lens. Although, where xml-conduit uses two different
+functions (`parseLBS` and `parseText`), xml-html-conduit-lens only needs one—`xml`—that gives you a traversal with XML root element as a possible target:
+
+```
+>>> let doc = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root/>" :: Data.Text.Lazy.Text
+>>> doc & xml.name %~ Data.Text.reverse
+"<?xml version=\"1.0\" encoding=\"UTF-8\"?><toor/>"
+```
+
+Note that we got back `Data.Text.Lazy.Text` without rendering the modified XML document
+manually. It comes at cost, though: if you want to do several modifications, each
+of them will pay the price of both parsing and rendering. To avoid that use `_XmlDocument`
+directly to parse to `Document`:
+
+```
+>>> let Just doc = ("<?xml version=\"1.0\" encoding=\"UTF-8\"?><root/>" :: Data.Text.Lazy.Text) ^? _XmlDocument
+>>> :t doc
+doc :: Document
+>>> let doc' = doc & xml.name %~ Data.Text.reverse & xml.name %~ join mappend
+```
+
+That's right, `xml` does actually work on `Document` too, for convience.
+
+The only task left is to render the modified document as XML.  `_XmlDocument` helps here
+as well, we only need to *invert* it:
+
+```
+>>> Data.Text.Lazy.IO.putStrLn $ review _XmlDocument doc'
+<?xml version="1.0" encoding="UTF-8"?><toortoor/>
+```
+
+For more sophisticated cases there's `_XmlDocumentWith`, which takes two functions
+modifying the default `ParseSettings` and `RenderSettings`
+
+```
+>>> Data.Text.Lazy.IO.putStr $ review (_XmlDocumentWith id (rsPretty .~ True)) doc'
+<?xml version="1.0" encoding="UTF-8"?>
+<toortoor/>
+```
+
+Admittedly, the result isn't very different for our example, but for more complex
+documents the difference will be very visible ;)
 
   [0]: https://hackage.haskell.org/package/xml-conduit
   [1]: https://hackage.haskell.org/package/html-conduit
