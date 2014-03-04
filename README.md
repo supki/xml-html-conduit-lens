@@ -8,9 +8,10 @@ Optics for [xml-conduit][0] and [html-conduit][1]
 
 ## Tutorial
 
-Imports you'll need:
+Imports and extensions you'll need:
 
-```
+```haskell
+>>> :set -XOverloadedStrings
 >>> import Control.Lens
 >>> import Text.Xml.Lens
 ```
@@ -19,7 +20,7 @@ Imports you'll need:
 
 First off, let's create a simple xml element; it won't have any attributes or children
 
-```
+```haskell
 >>> let tag name = _Element # (name, Data.Map.empty, [])
 >>> root_elem = tag "root"
 >>> :t root_elem
@@ -28,14 +29,14 @@ root_elem :: Element
 
 `Element` is an instance of `Show`, so we can inspect the value, but it won't be very pretty:
 
-```
+```haskell
 >>> root_elem
 Element {elementName = Name {nameLocalName = "root", nameNamespace = Nothing, namePrefix = Nothing}, elementAttributes = fromList [], elementNodes = []}
 ```
 
 Good news is we have a bunch of helpers for the inspection:
 
-```
+```haskell
 >>> view name root_elem
 "root"
 
@@ -53,16 +54,16 @@ to work conveniently with deeper hidden data.
 Let's add a few children to the root element. It's as easy as modifying haskell values with
 `lens` is.
 
-```
+```haskell
 >>> let subtag name = _NodeElement._Element # (name, Data.Map.empty, [])
->>> let xml_doc = root_elem & elementNodes <>~ [subtag "child1", subtag "child2", subtag "child3"]
+>>> let doc = root_elem & elementNodes <>~ [subtag "child1", subtag "child2", subtag "child3"]
 ```
 
-We can, of course, convert `xml_doc` with `show` and decipher that, but rendering it as XML is
+We can, of course, convert `doc` with `show` and decipher that, but rendering it as XML is
 going to be much more pretty:
 
-```
->>> Data.Text.Lazy.putStrLn $ xml_doc ^. renderWith (rsPretty .~ True)
+```haskell
+>>> Data.Text.Lazy.putStrLn $ doc ^. renderWith (rsPretty .~ True)
 <?xml version="1.0" encoding="UTF-8"?>
 <root>
     <child1/>
@@ -82,7 +83,7 @@ xml-conduit adds the first line automatically, you don't need to worry about it
 Well, text nodes are just a particular kind of nodes so there's nothing really specific about them:
 you just manipulate them as any other nodes
 
-```
+```haskell
 >>> :{
 let doc :: Data.Text.Lazy.Text
     doc = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root>foo<child>bar</child>baz</root>"
@@ -104,7 +105,7 @@ xml-conduit parses values of `Data.ByteString.Lazy.ByteString` and `Data.Text.La
 types and so does xml-html-conduit-lens. Although, where xml-conduit uses two different
 functions (`parseLBS` and `parseText`), xml-html-conduit-lens only needs one—`xml`—that gives you a traversal with XML root element as a possible target:
 
-```
+```haskell
 >>> let doc = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root/>" :: Data.Text.Lazy.Text
 
 >>> doc & xml.name %~ Data.Text.reverse
@@ -116,7 +117,7 @@ manually. It comes at cost, though: if you want to do several modifications, eac
 of them will pay the price of both parsing and rendering. To avoid that use `_XmlDocument`
 directly to parse to `Document`:
 
-```
+```haskell
 >>> let Just doc = ("<?xml version=\"1.0\" encoding=\"UTF-8\"?><root/>" :: Data.Text.Lazy.Text) ^? _XmlDocument
 
 >>> :t doc
@@ -130,7 +131,7 @@ That's right, `xml` does actually work on `Document` too, for convience.
 The only task left is to render the modified document as XML.  `_XmlDocument` helps here
 as well, we only need to *invert* it:
 
-```
+```haskell
 >>> Data.Text.Lazy.IO.putStrLn $ review _XmlDocument doc'
 <?xml version="1.0" encoding="UTF-8"?><toortoor/>
 ```
@@ -138,7 +139,7 @@ as well, we only need to *invert* it:
 For more sophisticated cases there's `_XmlDocumentWith`, which takes two functions
 modifying the default `ParseSettings` and `RenderSettings`
 
-```
+```haskell
 >>> Data.Text.Lazy.IO.putStr $ review (_XmlDocumentWith id (rsPretty .~ True)) doc'
 <?xml version="1.0" encoding="UTF-8"?>
 <toortoor/>
