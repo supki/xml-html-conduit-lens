@@ -38,8 +38,10 @@ Good news is we have a bunch of helpers for the inspection:
 ```
 >>> view name root_elem
 "root"
+
 >>> view elementNodes root_elem
 []
+
 >>> view elementAttributes root_elem
 fromList []
 ```
@@ -77,7 +79,24 @@ xml-conduit adds the first line automatically, you don't need to worry about it
 
 ### Text nodes
 
-### Using XPath
+Well, text nodes are just a particular kind of nodes so there's nothing really specific about them:
+you just manipulate them as any other nodes
+
+```
+>>> :{
+let doc :: Data.Text.Lazy.Text
+    doc = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root>foo<child>bar</child>baz</root>"
+:}
+
+>>> doc & xml.text %~ Data.Text.toUpper
+"<?xml version=\"1.0\" encoding=\"UTF-8\"?><root>FOO<child>bar</child>BAZ</root>"
+
+>>> doc & xml.node "child".text %~ Data.Text.toUpper
+"<?xml version=\"1.0\" encoding=\"UTF-8\"?><root>foo<child>BAR</child>baz</root>"
+
+>>> doc & xml.ix 0._NodeContent %~ Data.Text.toUpper
+"<?xml version=\"1.0\" encoding=\"UTF-8\"?><root>FOO<child>bar</child>baz</root>"
+```
 
 ### Parsing and rendering
 
@@ -87,6 +106,7 @@ functions (`parseLBS` and `parseText`), xml-html-conduit-lens only needs one—`
 
 ```
 >>> let doc = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root/>" :: Data.Text.Lazy.Text
+
 >>> doc & xml.name %~ Data.Text.reverse
 "<?xml version=\"1.0\" encoding=\"UTF-8\"?><toor/>"
 ```
@@ -98,8 +118,10 @@ directly to parse to `Document`:
 
 ```
 >>> let Just doc = ("<?xml version=\"1.0\" encoding=\"UTF-8\"?><root/>" :: Data.Text.Lazy.Text) ^? _XmlDocument
+
 >>> :t doc
 doc :: Document
+
 >>> let doc' = doc & xml.name %~ Data.Text.reverse & xml.name %~ join mappend
 ```
 
