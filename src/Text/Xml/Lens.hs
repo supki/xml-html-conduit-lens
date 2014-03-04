@@ -68,7 +68,7 @@ import           Data.Map (Map)
 import           Text.XML
   ( ParseSettings, RenderSettings
   , Document(Document), Doctype, Prologue(Prologue)
-  , Element, Instruction, Name, Miscellaneous(..)
+  , Element, Node, Instruction, Name, Miscellaneous(..)
   , XMLException(..), UnresolvedEntityException(..)
   , parseLBS, parseText, renderLBS, renderText, def
   )
@@ -259,15 +259,11 @@ epilog :: AsXmlDocument t => Traversal' t [Miscellaneous]
 epilog = _XmlDocument . documentEpilogue
 {-# INLINE epilog #-}
 
-type instance Index Element = Name
-type instance IxValue Element = Text
-
-instance At Element where
-  at n = elementAttributes . at n
-  {-# INLINE at #-}
+type instance Index Element = Int
+type instance IxValue Element = Node
 
 instance Ixed Element where
-  ix n = elementAttributes . ix n
+  ix n = elementNodes . ix n
   {-# INLINE ix #-}
 
 -- | Traverse immediate children
@@ -332,16 +328,19 @@ attrs = elementAttributes . itraversed
 --
 -- >>> let doc = "<root><foo bar=\"baz\" qux=\"quux\"/><foo qux=\"xyzzy\"/></root>" :: TL.Text
 --
--- >>> doc ^.. xml...attr "qux"
+-- >>> doc ^.. xml...attr "qux".traverse
 -- ["quux","xyzzy"]
 --
 -- >>> doc ^.. xml...attr "bar"
--- ["baz"]
+-- [Just "baz",Nothing]
 --
--- >>> doc & xml...attr "qux" %~ Text.reverse
+-- >>> doc & xml...attr "qux".traverse %~ Text.reverse
 -- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root><foo bar=\"baz\" qux=\"xuuq\"/><foo qux=\"yzzyx\"/></root>"
-attr :: Name -> Traversal' Element Text
-attr n = elementAttributes . ix n
+--
+-- >>> doc & xml.ix 1._NodeElement.attr "bar" ?~ "bazzy"
+-- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root><foo bar=\"baz\" qux=\"quux\"/><foo bar=\"bazzy\" qux=\"xyzzy\"/></root>"
+attr :: Name -> Lens' Element (Maybe Text)
+attr n = elementAttributes . at n
 {-# INLINE attr #-}
 
 -- | Select nodes by attributes' values
