@@ -115,7 +115,8 @@ Or we want to delete some:
 <root baz="xyzzy"/>
 ```
 
-More complex attribute traversals are also possible:
+More complex attribute traversals are also possible. The following example illustrates
+nodes filtering by the values of their attributes:
 
 ```haskell
 >>> let subtag name attr = _NodeElement._Element # (name, Data.Map.singleton "foo" attr, [])
