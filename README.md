@@ -90,7 +90,7 @@ We reuse the root element from the introduction
 You can see we pass an empty `Map` here, that's actually a `Map` of node's attributes:
 
 ```haskell
->>> let tag name = _Element # (name, Data.Map.fromList [("foo", "bar"), ("baz", "xyzzy))], [])
+>>> let tag name = _Element # (name, Data.Map.fromList [("foo", "bar"), ("baz", "xyzzy")], [])
 >>> let attributed_root_elem = tag "root"
 >>> Data.Text.Lazy.IO.putStr $ attributed_root_elem ^. renderWith (rsPretty .~ True)
 <?xml version="1.0" encoding="UTF-8"?>
