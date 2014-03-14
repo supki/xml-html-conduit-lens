@@ -22,7 +22,7 @@ First off, let's create a simple xml element; it won't have any attributes or ch
 
 ```haskell
 >>> let tag name = _Element # (name, Data.Map.empty, [])
->>> root_elem = tag "root"
+>>> let root_elem = tag "root"
 >>> :t root_elem
 root_elem :: Element
 ```
@@ -77,6 +77,43 @@ xml-conduit adds the first line automatically, you don't need to worry about it
 ### Manipulating elements
 
 ### Element attributes
+
+XML attributes are a mapping from `Name` to `Text` and the lens machinery is quite handy here
+
+We reuse the root element from the introduction
+
+```haskell
+>>> let tag name = _Element # (name, Data.Map.empty, [])
+>>> let root_elem = tag "root"
+```
+
+You can see we pass an empty `Map` here, that's actually a `Map` of node's attributes:
+
+```haskell
+>>> let tag name = _Element # (name, Data.Map.fromList [("foo", "bar"), ("baz", "xyzzy))], [])
+>>> let attributed_root_elem = tag "root"
+>>> Data.Text.Lazy.IO.putStr $ attributed_root_elem ^. renderWith (rsPretty .~ True)
+<?xml version="1.0" encoding="UTF-8"?>
+<root foo="bar" baz="xyzzy" />
+```
+
+But what if we already possess an `Element` to which we want to add some attributes? It's easy:
+
+```haskell
+>>> let attributed_root_elem = root_elem & attr "foo" ?~ "bar" & attr "baz" ?~ "xyzzy"
+>>> Data.Text.Lazy.IO.putStr $ attributed_root_elem ^. renderWith (rsPretty .~ True)
+<?xml version="1.0" encoding="UTF-8"?>
+<root foo="bar" baz="xyzzy" />
+```
+
+Or we want to delete some:
+
+```haskell
+>>> let attri_root_elem = attributed_root_elem & attr "foo" .~ Nothing
+>>> Data.Text.Lazy.IO.putStr $ attri_root_elem ^. renderWith (rsPretty .~ True)
+<?xml version="1.0" encoding="UTF-8"?>
+<root baz="xyzzy"/>
+```
 
 ### Text nodes
 
