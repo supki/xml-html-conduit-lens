@@ -115,6 +115,26 @@ Or we want to delete some:
 <root baz="xyzzy"/>
 ```
 
+More complex attribute traversals are also possible:
+
+```haskell
+>>> let subtag name attr = _NodeElement._Element # (name, Data.Map.singleton "foo" attr, [])
+>>> let doc = root_elem & elementNodes <>~ [subtag "child" "boo", subtag "child" "foo"]
+>>> Data.Text.Lazy.IO.putStr $ doc ^. renderWith (rsPretty .~ True)
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+    <child foo="boo"/>
+    <child foo="hoo"/>
+</root>
+>>> let doc' = doc & plate.attributed (ix "foo".only "hoo").name %~ Data.Text.toUpper
+>>> Data.Text.Lazy.IO.putStr $ doc' ^. renderWith (rsPretty .~ True)
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+    <child foo="boo"/>
+    <CHILD foo="hoo"/>
+</root>
+```
+
 ### Text nodes
 
 Well, text nodes are just a particular kind of nodes so there's nothing really specific about them:
