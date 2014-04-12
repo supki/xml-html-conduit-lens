@@ -39,7 +39,7 @@ listTitlesAndAuthors = xml...attributed (ix "category".only "Textbooks")
 -- >>> doc ^.. listAllTags
 -- ["books","book","title","author","pages","price","book","title","author","pages","book","title","author","pages","book","title","author","pages","book","title","author","pages","book","title","author","pages","book","title","author"]
 listAllTags :: AsXmlDocument t => Fold t Text
-listAllTags = xml.to universe.folded.name
+listAllTags = xml.folding universe.name
 
 -- | Compute the length of the books list:
 --
