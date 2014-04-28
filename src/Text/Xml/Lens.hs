@@ -26,6 +26,7 @@ module Text.Xml.Lens
   , afterDoctype
     -- * Element
   , Element
+  , ixOf
   , node
   , named
   , attrs
@@ -68,7 +69,7 @@ import           Data.Map (Map)
 import           Text.XML
   ( ParseSettings, RenderSettings
   , Document(Document), Doctype, Prologue(Prologue)
-  , Element, Node, Instruction, Name, Miscellaneous(..)
+  , Node, Element, Instruction, Name, Miscellaneous(..)
   , XMLException(..), UnresolvedEntityException(..)
   , parseLBS, parseText, renderLBS, renderText, def
   )
@@ -260,11 +261,29 @@ epilog = _XmlDocument . documentEpilogue
 {-# INLINE epilog #-}
 
 type instance Index Element = Int
-type instance IxValue Element = Node
+type instance IxValue Element = Element
 
+-- | Index child 'Element's by an 'Int'
+--
+-- >>> let doc = "<root>zero<foo>one</foo><bar>two</bar>three<baz/>four</root>" :: TL.Text
+--
+-- >>> doc ^? xml.parts.ix 1.text
+-- Just "two"
+--
+-- To index subnodes indexed by a Traversal', use 'ixOf'
 instance Ixed Element where
-  ix n = elementNodes . ix n
+  ix n = parts . ix n
   {-# INLINE ix #-}
+
+-- | Index subnodes selected with a 'Traversal' by an 'Int'
+--
+-- >>> let doc = "<root>zero<foo>one</foo><bar>two</bar>three<baz/>four</root>" :: TL.Text
+--
+-- >>> doc ^? xml.ixOf _NodeContent 2
+-- Just "four"
+ixOf :: Traversal' Node a -> Index Element -> Traversal' Element a
+ixOf p n = partsOf (insideOf p) . ix n
+{-# INLINE ixOf #-}
 
 -- | Traverse immediate children
 --
@@ -276,8 +295,12 @@ instance Ixed Element where
 -- >>> doc & partsOf (root...name) .~ ["boo", "hoo", "moo"]
 -- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root><boo>4</boo><hoo>7</hoo><moo>11</moo></root>"
 instance Plated Element where
-  plate = elementNodes . traverse . _NodeElement
+  plate = insideOf _NodeElement
   {-# INLINE plate #-}
+
+insideOf :: Traversal Node Node a b -> Traversal Element Element a b
+insideOf p = elementNodes . traverse . p
+{-# INLINE insideOf #-}
 
 -- | Traverse immediate children with a specific name
 --
@@ -337,7 +360,7 @@ attrs = elementAttributes . itraversed
 -- >>> doc & xml...attr "qux".traverse %~ Text.reverse
 -- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root><foo bar=\"baz\" qux=\"xuuq\"/><foo qux=\"yzzyx\"/></root>"
 --
--- >>> doc & xml.ix 1._NodeElement.attr "bar" ?~ "bazzy"
+-- >>> doc & xml.ix 1.attr "bar" ?~ "bazzy"
 -- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root><foo bar=\"baz\" qux=\"quux\"/><foo bar=\"bazzy\" qux=\"xyzzy\"/></root>"
 attr :: Name -> Lens' Element (Maybe Text)
 attr n = elementAttributes . at n

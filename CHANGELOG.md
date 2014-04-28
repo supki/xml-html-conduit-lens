@@ -7,9 +7,11 @@
 
   * `attr` is now a Lens, not a Traversal, so it can add and remove attributes from the node
 
-  * `Ixed` instance for `Element` traverses child nodes instead of attributes, which seems saner
+  * `Ixed` instance for `Element` traverses child `Element`s instead of attributes
 
   * Avoid working with `def` directly, instead take settings endomorphisms as arguments in `*With` functions
+
+  * Add `ixOf` to aid indexing subnodes chosen by a `Traversal`
 
 0.2.0.0
 =======
