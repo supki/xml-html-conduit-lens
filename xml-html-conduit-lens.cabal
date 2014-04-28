@@ -1,5 +1,5 @@
 name:                xml-html-conduit-lens
-version:             0.2.0.0
+version:             0.3.0.0
 synopsis:            Optics for xml-conduit and html-conduit
 description:         Optics for xml-conduit and html-conduit
 homepage:            https://github.com/supki/xml-html-conduit-lens#readme
