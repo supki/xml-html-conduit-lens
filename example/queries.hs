@@ -34,6 +34,13 @@ listTitlesAndAuthors :: AsXmlDocument t => Fold t (Text, Text)
 listTitlesAndAuthors = xml...attributed (ix "category".only "Textbooks")
   .runFold (liftA2 (,) (Fold (node "title".text)) (Fold (node "author".text)))
 
+-- | Lists the title of the third book in the list
+--
+-- >>> doc ^? listThirdTitle
+-- Just "Programming in Haskell"
+listThirdTitle :: AsXmlDocument t => Fold t Text
+listThirdTitle = xml.parts.ix 2.node "title".text
+
 -- | List all tags from top to bottom:
 --
 -- >>> doc ^.. listAllTags
