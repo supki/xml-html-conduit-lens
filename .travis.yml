@@ -1,5 +1,9 @@
 language: haskell
 
+ghc:
+    - 7.8
+    - 7.6
+
 script:
     - cabal install --enable-tests xml-html-conduit-lens.cabal
     - cabal sdist
