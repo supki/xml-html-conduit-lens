@@ -1,3 +1,8 @@
+0.3.1.0
+=======
+
+  * Re-export `ParseSettings` and `RenderSettings`
+
 0.3.0.0
 =======
 

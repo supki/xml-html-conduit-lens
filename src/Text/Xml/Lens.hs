@@ -17,6 +17,8 @@ module Text.Xml.Lens
   , prolog
   , epilog
   , AsXmlDocument(..)
+  , ParseSettings
+  , RenderSettings
   , _XmlDocument
   , AsHtmlDocument(..)
     -- * Doctype
