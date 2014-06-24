@@ -35,6 +35,7 @@ module Text.Xml.Lens
   , attr
   , attributed
   , text
+  , texts
   , HasComments(..)
   , HasInstructions(..)
     -- * Name
@@ -61,6 +62,7 @@ module Text.Xml.Lens
   , module Text.Xml.Lens.LowLevel
   ) where
 
+import           Control.Applicative
 import           Control.Exception (SomeException)
 import           Control.Exception.Lens (exception)
 import           Control.Lens
@@ -71,7 +73,7 @@ import           Data.Map (Map)
 import           Text.XML
   ( ParseSettings, RenderSettings
   , Document(Document), Doctype, Prologue(Prologue)
-  , Node, Element, Instruction, Name, Miscellaneous(..)
+  , Node(..), Element, Instruction, Name, Miscellaneous(..)
   , XMLException(..), UnresolvedEntityException(..)
   , parseLBS, parseText, renderLBS, renderText, def
   )
@@ -393,6 +395,21 @@ attributed p = filtered (has (elementAttributes . p))
 text :: Traversal' Element Text
 text = elementNodes . traverse . _NodeContent
 {-# INLINE text #-}
+
+-- | Traverse node text contents recursively
+--
+-- >>> let doc = "<root>qux<foo>boo</foo><bar><baz>hoo</baz>quux</bar></root>" :: TL.Text
+--
+-- >>> doc ^.. xml.texts
+-- ["qux","boo","hoo","quux"]
+--
+-- >>> doc & xml.texts %~ Text.toUpper
+-- "<?xml version=\"1.0\" encoding=\"UTF-8\"?><root>QUX<foo>BOO</foo><bar><baz>HOO</baz>QUUX</bar></root>"
+texts :: Traversal' Element Text
+texts f = elementNodes (traverse go) where
+  go (NodeElement e) = NodeElement <$> texts f e
+  go (NodeContent c) = NodeContent <$> f c
+  go x = pure x
 
 -- | Anything that has comments
 class HasComments t where
