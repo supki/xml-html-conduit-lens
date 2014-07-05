@@ -1,7 +1,5 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE Rank2Types #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 -- | Optics for xml-conduit and html-conduit
@@ -81,7 +79,7 @@ import           Text.XML.Stream.Parse (EventPos)
 import           Text.XML.Unresolved (InvalidEventStream(..))
 import qualified Text.HTML.DOM as Html
 
-import Text.Xml.Lens.LowLevel
+import           Text.Xml.Lens.LowLevel
 
 -- $setup
 -- >>> :set -XOverloadedStrings
