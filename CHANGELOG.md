@@ -1,3 +1,8 @@
+0.3.2.1
+=======
+
+  * Put missing files in the source distribution
+
 0.3.2.0
 =======
 
