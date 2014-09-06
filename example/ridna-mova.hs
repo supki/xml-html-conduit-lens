@@ -1,21 +1,21 @@
 {-# LANGUAGE OverloadedStrings #-}
--- | The rendered version of the web-scraped
--- articles is available at <https://budueba.com/lessons.html>
+-- | The rendered version of the web-scraped articles
+-- is available at <https://budueba.com/lessons.html>
 module Main (main) where
 
-import           Control.Applicative               -- base
-import           Control.Lens                      -- lens
-import           Control.Monad.IO.Class (liftIO)   -- transformers
-import           Data.Foldable (for_)              -- base
-import           Data.List.Lens (prefixed)         -- lens
-import           Data.Monoid ((<>), mconcat, Endo) -- base
-import           Data.Text (Text)                  -- text
-import           Data.Text.Lens (unpacked)         -- lens
-import qualified Data.Text as Text                 -- text
-import qualified Data.Text.IO as Text              -- text
-import qualified Network.HTTP.Conduit as Http      -- http-conduit
-import           Text.Printf (printf)              -- base
-import           Text.Xml.Lens                     -- xml-html-conduit-lens
+import           Control.Applicative                     -- base
+import           Control.Lens                            -- lens
+import qualified Data.ByteString.Lazy as ByteString.Lazy -- bytestring
+import           Data.List.Lens (prefixed)               -- lens
+import           Data.Monoid ((<>), mconcat, Endo)       -- base
+import           Data.Text (Text)                        -- text
+import           Data.Text.Lens (unpacked)               -- lens
+import qualified Data.Text as Text                       -- text
+import qualified Data.Text.IO as Text                    -- text
+import           Data.Traversable (for)                  -- base
+import qualified Network.HTTP.Conduit as Http            -- http-conduit
+import           Text.Printf (printf)                    -- base
+import           Text.Xml.Lens                           -- xml-html-conduit-lens
 
 
 -- | Scrap "Уроки державної мови" articles from the Web
@@ -26,12 +26,15 @@ import           Text.Xml.Lens                     -- xml-html-conduit-lens
 -- The output is a compilation of the articles in the Github Flavored Markdown format
 main :: IO ()
 main = do
-  Http.withManager $ \m ->
-    for_ [2002, 2003, 2004] $ \roka -> do
+  as <- Http.withManager $ \m -> do
+    for [2002, 2003, 2004] $ \roka -> do
       req <- Http.parseUrl (url roka)
       res <- Http.httpLbs req m
-      for_ (articles (toListOf atoms (Http.responseBody res))) $
-        liftIO . Text.putStrLn . renderArticle
+      return (articles (toListOf atoms (roundtrip (Http.responseBody res))))
+  (mapM_.mapM_) (Text.putStrLn . renderArticle) as
+ where
+  -- Concatenate chunks of the "lazy" bytestring to work around a html-conduit bug
+  roundtrip = ByteString.Lazy.fromStrict . ByteString.Lazy.toStrict
 
 -- | Construct the page URL for the given year
 url :: Int -> String
@@ -39,19 +42,20 @@ url = printf "https://sites.google.com/site/mandrivnyjvolhv/ridna-vira/ridna-mov
 
 
 data Article = Article
-  { heading, content :: Text
+  { heading :: Text
+  , content :: [Text]
   , table :: Table
   } deriving (Show)
 
 type Table = [(Text, Text)]
 
 renderArticle :: Article -> Text
-renderArticle Article { heading = h, content = c, table = t } = Text.unlines $
-  [h, Text.replicate (Text.length h) "-"] ++ [c | not (Text.null c)] ++ [renderTable t | not (null t)]
+renderArticle Article { heading = h, content = c, table = t } = Text.intercalate "\n" $
+  [h, Text.replicate (Text.length h) "-"] ++ map (<> "\n") c ++ [renderTable t | not (null t)]
 
 renderTable :: Table -> Text
-renderTable xs = Text.intercalate "\n" $
-  ["Неправильно | Правильно", " :--------: | :------: "] ++ map (uncurry (\a b -> a <> " | " <> b)) xs
+renderTable xs = Text.unlines $
+  ["Неправильно | Правильно", " :--------: |  :-----: "] ++ map (uncurry (\a b -> a <> " | " <> b)) xs
 
 -- | Convert a stream of data (headings and paragraphs) to well-formed articles
 articles :: [Atom] -> [Article]
@@ -62,14 +66,14 @@ articles = go Nothing
       Nothing -> go (Just h') zs
       Just h  -> Article {
           heading = h
-        , content = view (folded._Paragraph) ys
+        , content = toListOf (folded._Paragraph) ys
         , table = view (folded._Table) ys
         } : go (Just h') zs
     (ys, []) -> case mh of
       Nothing -> []
       Just h  -> pure Article {
           heading = h
-        , content = view (folded._Paragraph) ys
+        , content = toListOf (folded._Paragraph) ys
         , table = view (folded._Table) ys
         }
     (_, _) -> error "Impossible!"
