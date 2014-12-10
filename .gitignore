@@ -2,3 +2,5 @@ dist/
 cabal-dev/
 cabal.sandbox.config
 .cabal-sandbox
+env.nix
+result
