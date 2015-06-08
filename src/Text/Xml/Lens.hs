@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE Rank2Types #-}
@@ -60,7 +61,9 @@ module Text.Xml.Lens
   , module Text.Xml.Lens.LowLevel
   ) where
 
+#if __GLASGOW_HASKELL__ < 710
 import           Control.Applicative
+#endif
 import           Control.Exception (SomeException)
 import           Control.Exception.Lens (exception)
 import           Control.Lens
