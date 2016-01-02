@@ -3,11 +3,10 @@
 -- is available at <https://budueba.com/lessons.html>
 module Main (main) where
 
-import           Control.Applicative                     -- base
 import           Control.Lens                            -- lens
 import qualified Data.ByteString.Lazy as ByteString.Lazy -- bytestring
 import           Data.List.Lens (prefixed)               -- lens
-import           Data.Monoid ((<>), mconcat, Endo)       -- base
+import           Data.Monoid ((<>), Endo)                -- base
 import           Data.Text (Text)                        -- text
 import           Data.Text.Lens (unpacked)               -- lens
 import qualified Data.Text as Text                       -- text
@@ -26,11 +25,11 @@ import           Text.Xml.Lens                           -- xml-html-conduit-len
 -- The output is a compilation of the articles in the Github Flavored Markdown format
 main :: IO ()
 main = do
-  as <- Http.withManager $ \m -> do
-    for [2002, 2003, 2004] $ \roka -> do
-      req <- Http.parseUrl (url roka)
-      res <- Http.httpLbs req m
-      return (articles (toListOf atoms (roundtrip (Http.responseBody res))))
+  man <- Http.newManager Http.tlsManagerSettings
+  as <- for [2002, 2003, 2004] $ \roka -> do
+    req <- Http.parseUrl (url roka)
+    res <- Http.httpLbs req man
+    pure (articles (toListOf atoms (roundtrip (Http.responseBody res))))
   (mapM_.mapM_) (Text.putStrLn . renderArticle) as
  where
   -- Concatenate chunks of the "lazy" bytestring to work around a html-conduit bug
@@ -38,8 +37,8 @@ main = do
 
 -- | Construct the page URL for the given year
 url :: Int -> String
-url = printf "https://sites.google.com/site/mandrivnyjvolhv/ridna-vira/ridna-mova/boris-rogoza/%s" . show
-
+url =
+  printf "https://sites.google.com/site/mandrivnyjvolhv/ridna-vira/ridna-mova/boris-rogoza/%d"
 
 data Article = Article
   { heading :: Text

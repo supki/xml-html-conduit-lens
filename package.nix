@@ -6,10 +6,10 @@ mkDerivation {
   pname = "xml-html-conduit-lens";
   version = "0.3.2.1";
   src = ./.;
-  buildDepends = [
+  libraryHaskellDepends = [
     base bytestring containers html-conduit lens text xml-conduit
   ];
-  testDepends = [
+  testHaskellDepends = [
     base doctest hspec hspec-expectations-lens lens xml-conduit
   ];
   homepage = "https://github.com/supki/xml-html-conduit-lens#readme";

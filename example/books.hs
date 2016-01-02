@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Queries where
+module Books where
 
 import Control.Applicative -- base
 import Control.Lens        -- lens
@@ -12,59 +12,69 @@ import Text.Xml.Lens       -- xml-html-conduit-lens
 -- >>> import qualified Data.Text.Lazy.IO as Text
 -- >>> doc <- Text.readFile "example/books.xml"
 
--- | List titles of the books in "Textbooks" category:
+-- | Titles of the books in the "Textbooks" category
 --
--- >>> doc ^.. listTitles
+-- >>> toListOf titles doc
 -- ["Learn You a Haskell for Great Good!","Programming in Haskell","Real World Haskell"]
-listTitles :: AsXmlDocument t => Traversal' t Text
-listTitles = xml...attributed (ix "category".only "Textbooks").node "title".text
+titles :: AsXmlDocument t => Traversal' t Text
+titles =
+  xml...attributed (ix "category".only "Textbooks").node "title".text
 
--- | List authors of the books longer then 500 pages:
+-- | Authors of the books longer then 500 pages
 --
--- >>> doc ^.. listAuthors
+-- >>> toListOf authors doc
 -- ["Bryan O'Sullivan, Don Stewart, and John Goerzen","Benjamin C. Pierce"]
-listAuthors :: AsXmlDocument t => Traversal' t Text
-listAuthors = xml...filtered (has (node "pages".text.filtered (> "500"))).node "author".text
+authors :: AsXmlDocument t => Traversal' t Text
+authors =
+  xml...filtered (has (node "pages".text.filtered (> "500"))).node "author".text
 
--- | List titles and authors of the books in "Textbooks" category
+-- | Titles and authors of the books in the "Textbooks" category
 --
--- >>> doc ^.. listTitlesAndAuthors
+-- >>> toListOf titlesAndAuthors doc
 -- [("Learn You a Haskell for Great Good!","Miran Lipovaca"),("Programming in Haskell","Graham Hutton"),("Real World Haskell","Bryan O'Sullivan, Don Stewart, and John Goerzen")]
-listTitlesAndAuthors :: AsXmlDocument t => Fold t (Text, Text)
-listTitlesAndAuthors = xml...attributed (ix "category".only "Textbooks")
-  .runFold (liftA2 (,) (Fold (node "title".text)) (Fold (node "author".text)))
+titlesAndAuthors :: AsXmlDocument t => Fold t (Text, Text)
+titlesAndAuthors =
+  xml...attributed (ix "category".only "Textbooks").runFold (liftA2 (,) (Fold title) (Fold author))
+ where
+  title, author :: Fold Element Text
+  title = node "title".text
+  author = node "author".text
 
--- | Lists the title of the third book in the list
+-- | Title of the third book in the list
 --
--- >>> doc ^? listThirdTitle
+-- >>> preview thirdTitle doc
 -- Just "Programming in Haskell"
-listThirdTitle :: AsXmlDocument t => Fold t Text
-listThirdTitle = xml.parts.ix 2.node "title".text
+thirdTitle :: AsXmlDocument t => Fold t Text
+thirdTitle =
+  xml.parts.ix 2.node "title".text
 
--- | List all tags from top to bottom:
+-- | All tags in the document.
 --
--- >>> doc ^.. listAllTags
+-- >>> toListOf allTags doc
 -- ["books","book","title","author","pages","price","book","title","author","pages","book","title","author","pages","book","title","author","pages","book","title","author","pages","book","title","author","pages","book","title","author"]
-listAllTags :: AsXmlDocument t => Fold t Text
-listAllTags = xml.folding universe.name
+allTags :: AsXmlDocument t => Fold t Text
+allTags =
+  xml.folding universe.name
 
 -- | Compute the length of the books list:
 --
--- >>> doc & countBooks
+-- >>> lengthOf allBooks doc
 -- 7
-countBooks :: AsXmlDocument t => t -> Int
-countBooks = lengthOf (xml.plate)
+allBooks :: AsXmlDocument t => Traversal' t Element
+allBooks =
+  xml.plate
 
--- | Find the title of the first book in "Joke" category:
+-- | Find the title of the first book in the "Joke" category:
 --
--- >>> doc ^? titleOfFirstJokeBook
+-- >>> preview titleOfFirstJokeBook doc
 -- Just "Functional Ikamusume"
 titleOfFirstJokeBook :: AsXmlDocument t => Traversal' t Text
-titleOfFirstJokeBook = xml...attributed (ix "category".only "Joke").node "title".text
+titleOfFirstJokeBook =
+  xml...attributed (ix "category".only "Joke").node "title".text
 
--- | Append the string " pages" to each `<pages>` tag contents:
+-- | Append the string " pages" to `<pages>` tags' content:
 --
--- >>> doc & appendPages & Text.putStr
+-- >>>  Text.putStr (appendPages doc)
 -- <?xml version="1.0" encoding="UTF-8"?><books>
 -- <book category="Language and library definition">
 --     <title>Haskell 98 language and libraries: the Revised Report</title>
@@ -103,4 +113,5 @@ titleOfFirstJokeBook = xml...attributed (ix "category".only "Joke").node "title"
 -- </book>
 -- </books>
 appendPages :: AsXmlDocument t => t -> t
-appendPages = xml...node "pages".text <>~ " pages"
+appendPages =
+  xml...node "pages".text <>~ " pages"

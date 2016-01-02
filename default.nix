@@ -1,2 +1,2 @@
-{ nixpkgs ? import <nixpkgs> {}, compiler ? "ghc7101" }:
-nixpkgs.pkgs.haskell.packages.${compiler}.callPackage ./xml-html-conduit-lens.nix {}
+{ nixpkgs ? import <nixpkgs> {}, compiler ? "ghc7102" }:
+nixpkgs.pkgs.haskell.packages.${compiler}.callPackage ./package.nix {}
