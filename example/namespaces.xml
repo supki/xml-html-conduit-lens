@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lists xmlns:pokemon="http://pokemon.example.com"
+       xmlns:communist="http://communist.example.com">
+    <pokemon:list>
+        <pokemon:seed   pokemon:type="grass poison" pokemon:name="bulbasaur" />
+        <pokemon:lizard pokemon:type="fire"         pokemon:name="charmander" />
+        <pokemon:fox    pokemon:type="fire"         pokemon:name="vulpix" />
+    </pokemon:list>
+    <communist:list>
+        <communist:person communist:nationality="German" communist:name="Rosa Luxembourg" />
+        <communist:person communist:nationality="Soviet" communist:name="Alexandra Kollantai" />
+        <communist:person communist:nationality="Soviet" communist:name="Nadezhda Krupskaya" />
+    </communist:list>
+</lists>
