@@ -4,7 +4,7 @@
 }:
 mkDerivation {
   pname = "xml-html-conduit-lens";
-  version = "0.3.2.1";
+  version = "0.3.2.2";
   src = ./.;
   libraryHaskellDepends = [
     base bytestring containers html-conduit lens text xml-conduit

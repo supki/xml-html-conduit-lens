@@ -195,12 +195,12 @@ prolog = _XmlDocument . documentPrologue
 --     <child2/>
 --     <child3/>
 -- </root>
-renderWith :: (Contravariant f, AsXmlDocument t) => (RenderSettings -> RenderSettings) -> LensLike' f Element t
+renderWith :: (Functor f, Contravariant f, AsXmlDocument t) => (RenderSettings -> RenderSettings) -> LensLike' f Element t
 renderWith r = to (\e -> Document (Prologue [] Nothing []) e []) . re (_XmlDocumentWith id r)
 {-# INLINE renderWith #-}
 
 -- | Fold 'Element' into the XML document with the default rendering settings
-render :: (Contravariant f, AsXmlDocument t) => LensLike' f Element t
+render :: (Functor f, Contravariant f, AsXmlDocument t) => LensLike' f Element t
 render = renderWith id
 {-# INLINE render #-}
 
