@@ -68,7 +68,7 @@ test-suite hspec
     , hspec
     , hspec-expectations-lens >= 0.3
     , lens                    >= 4.0
-    , xml-conduit             >= 1.1   && < 1.6
+    , xml-conduit             >= 1.1   && < 1.8
     , xml-html-conduit-lens
   other-modules:
     Text.Xml.LensSpec
