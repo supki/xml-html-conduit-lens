@@ -94,7 +94,7 @@ titleOfFirstJokeBook =
 -- </book>
 -- <book category="Textbooks">
 --     <title>Real World Haskell</title>
---     <author year="2008">Bryan O'Sullivan, Don Stewart, and John Goerzen</author>
+--     <author year="2008">Bryan O&#39;Sullivan, Don Stewart, and John Goerzen</author>
 --     <pages>700 pages</pages>
 -- </book>
 -- <book category="TextBooks">
@@ -109,7 +109,7 @@ titleOfFirstJokeBook =
 -- </book>
 -- <book category="Joke">
 --     <title>Functional Ikamusume</title>
---     <author>Team "Referential Transparent Sea Keepers"</author>
+--     <author>Team &#34;Referential Transparent Sea Keepers&#34;</author>
 -- </book>
 -- </books>
 appendPages :: AsXmlDocument t => t -> t
