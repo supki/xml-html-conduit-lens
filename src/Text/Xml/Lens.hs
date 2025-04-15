@@ -113,7 +113,7 @@ instance AsXmlDocument TL.Text where
 
 -- | XML document parsing and rendering with the default settings
 _XmlDocument :: AsXmlDocument t => Prism' t Document
-_XmlDocument = _XmlDocumentWith def def
+_XmlDocument = _XmlDocumentWith (const def) (const def)
 {-# INLINE _XmlDocument #-}
 
 -- | HTML document parsing overloading
