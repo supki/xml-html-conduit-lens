@@ -11,6 +11,7 @@ import           Text.XML
   )
 import           Text.XML.Stream.Parse (DecodeEntities)
 import qualified Text.XML as XML
+import qualified Text.XML.Stream.Render.Internal as XMLI (rsPretty)
 
 -- | A Lens into 'XML.psDecodeEntities'
 psDecodeEntities :: Lens' ParseSettings DecodeEntities
@@ -19,7 +20,7 @@ psDecodeEntities f ps = f (XML.psDecodeEntities ps) <&> \p -> ps { XML.psDecodeE
 
 -- | A Lens into 'XML.rsPretty'
 rsPretty :: Lens' RenderSettings Bool
-rsPretty f rs = f (XML.rsPretty rs) <&> \p -> rs { XML.rsPretty = p }
+rsPretty f rs = f (XMLI.rsPretty rs) <&> \p -> rs { XMLI.rsPretty = p }
 {-# INLINE rsPretty #-}
 
 -- | A Lens into 'XML.rsNamespaces'
