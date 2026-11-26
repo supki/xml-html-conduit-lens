@@ -1,1 +1,4 @@
+:set -Wall
 :set -XOverloadedStrings
+:set -isrc
+:set -itest

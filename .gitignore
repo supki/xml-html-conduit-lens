@@ -1,7 +1,4 @@
 dist/
 dist-newstyle/
-cabal-dev/
-cabal.sandbox.config
-.cabal-sandbox
-env.nix
-result
+.stack-work/
+.ghci_history
